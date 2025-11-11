@@ -1,0 +1,8 @@
+# Dành cho tất cả file text
+* text=auto
+
+# Dành riêng cho file code Python
+*.py text eol=lf
+
+# Dành riêng cho file Java
+*.java text eol=lf
