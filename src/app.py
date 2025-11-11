@@ -1,35 +1,85 @@
 # src/app.py
-from flask import Flask, jsonify
+from flask import Flask, jsonify, g, request
+import uuid
+import os
+from dotenv import load_dotenv
+from typing import Tuple
 
-# Import các Blueprint (định tuyến) từ thư mục src/routes/
-from routes.employees import employees_bp 
+# Load biến môi trường từ file .env
+load_dotenv()
+
+# Import các Blueprint (định tuyến)
+from routes.employees import employees_bp
 # Bạn sẽ thêm các module khác sau: payroll_bp, attendance_bp, v.v.
+
+from utils.response import wrap_success, wrap_error
+from clients.java_client import JavaClient
+
 
 def create_app():
     """Tạo và cấu hình ứng dụng Flask."""
-    
     app = Flask(__name__)
-    
-    # 1. Cấu hình ứng dụng (ví dụ: biến cấu hình, khóa bí mật)
-    # Nếu bạn có file config riêng, bạn sẽ tải chúng ở đây.
-    app.config['SECRET_KEY'] = 'mot_chuoi_bi_mat_rat_dai_va_kho'
-    
-    # 2. Đăng ký các Blueprint (Định tuyến API)
-    # Đây là nơi API /employees, /payroll, /dividends được thêm vào ứng dụng
-    app.register_blueprint(employees_bp)
-    # app.register_blueprint(payroll_bp, url_prefix='/payroll') # Ví dụ cho module khác
 
-    # 3. Xử lý lỗi cơ bản (Tùy chọn)
+    # 1. Cấu hình ứng dụng (biến cấu hình, bí mật)
+    app.config['SECRET_KEY'] = 'mot_chuoi_bi_mat_rat_dai_va_kho'
+    app.config['JAVA_BASE_URL'] = os.getenv('JAVA_BASE_URL', 'http://localhost:8080')
+    app.config['SQL_SERVER_CONN_STRING'] = os.getenv("SQL_SERVER_CONN_STRING")  # nếu dùng SQL Server
+
+    # 2. Đăng ký Blueprint
+    app.register_blueprint(employees_bp)
+
+    # 3. Xử lý lỗi 404
     @app.errorhandler(404)
     def page_not_found(e):
-        return jsonify({'message': 'Endpoint không tồn tại'}), 404
+        trace_id = getattr(g, 'trace_id', None)
+        return jsonify(
+            wrap_error(
+                code='NOT_FOUND',
+                message='Endpoint không tồn tại',
+                domain='routing',
+                details=None,
+                trace_id=trace_id
+            )
+        ), 404
+
+    # Tạo trace_id cho mỗi request
+    @app.before_request
+    def ensure_request_id():
+        incoming = request.headers.get('X-Request-Id')
+        g.trace_id = incoming if incoming else str(uuid.uuid4())
+
+    # Endpoint test gọi sang Java
+    @app.get('/java/health')
+    def java_health():
+        client = JavaClient(base_url=app.config['JAVA_BASE_URL'], trace_id=g.trace_id)
+        ok, status_code, payload = client.get('/api/v1/health')
+
+        if ok is True and isinstance(payload, dict) and payload.get('operationType') == 'Success':
+            payload['traceId'] = payload.get('traceId') or g.trace_id
+            return jsonify(payload), status_code
+
+        if ok is False and isinstance(payload, dict) and payload.get('operationType') == 'Failure':
+            payload['traceId'] = payload.get('traceId') or g.trace_id
+            return jsonify(payload), status_code
+
+        if ok:
+            return jsonify(wrap_success(payload, trace_id=g.trace_id)), status_code
+
+        return jsonify(
+            wrap_error(
+                code='INTERNAL_SERVER',
+                message='Java call failed',
+                domain='java',
+                details=payload,
+                trace_id=g.trace_id,
+            )
+        ), status_code or 500
 
     return app
+
 
 # Khởi tạo ứng dụng
 app = create_app()
 
-# Khối lệnh chạy ứng dụng (thường chỉ dùng khi chạy trực tiếp bằng python app.py)
-# Khi dùng 'flask run' thì không cần khối này, nhưng có cũng không hại gì.
 if __name__ == '__main__':
     app.run(debug=True)
