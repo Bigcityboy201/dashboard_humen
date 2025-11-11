@@ -1,0 +1,18 @@
+# .gitignore
+
+# 1. Môi trường ảo và Python
+/venv
+/.venv
+__pycache__/
+*.pyc
+*.log
+
+# 2. Cấu hình Nhạy cảm và Cục bộ
+.env
+.flaskenv
+*.db
+
+# 3. IDE và Hệ thống
+.vscode/
+Thumbs.db
+.DS_Store
