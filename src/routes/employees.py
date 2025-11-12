@@ -1,7 +1,7 @@
 # src/routes/employees.py
 
 from flask import Blueprint, jsonify, request, g
-from services.employee_service import get_all_employees
+from services.employee_service import get_all_employees,create_employee_transaction
 # Import logic validation nếu cần (src/services/validation.py)
 from utils.response import wrap_success, wrap_error
 
@@ -34,3 +34,34 @@ def list_employees():
     except Exception as e:
         # Trả về lỗi thống nhất theo định dạng Error của Java
         return jsonify(wrap_error(code='INTERNAL_SERVER', message='Lỗi khi truy vấn danh sách nhân viên.', domain='employees', details={"error": str(e)}, trace_id=getattr(g, 'trace_id', None))), 500
+    
+    
+@employees_bp.route('/employees', methods=['POST'])
+def create_new_employee():
+    """
+    API Endpoint: POST /employees
+    Thêm mới nhân viên cùng lương khởi điểm.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(wrap_error(
+                code='BAD_REQUEST',
+                message='Thiếu dữ liệu gửi lên.',
+                domain='employees',
+                trace_id=getattr(g, 'trace_id', None)
+            )), 400
+
+        # Gọi service để xử lý thêm nhân viên
+        new_employee = create_employee_transaction(data)
+
+        return jsonify(wrap_success(new_employee, trace_id=getattr(g, 'trace_id', None))), 201
+
+    except Exception as e:
+        return jsonify(wrap_error(
+            code='INTERNAL_SERVER',
+            message='Lỗi khi thêm mới nhân viên.',
+            domain='employees',
+            details={"error": str(e)},
+            trace_id=getattr(g, 'trace_id', None)
+        )), 500
