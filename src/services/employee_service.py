@@ -1,9 +1,8 @@
 import os
 from typing import Any, Dict, List, Tuple
-
+import datetime
 from config.sqlserver_connection import get_sqlserver_connection
 from config.mysql_connection import get_mysql_connection
-
 
 def get_db_vendor() -> str:
 	return os.environ.get("DB_VENDOR", "sqlserver").strip().lower()
@@ -167,3 +166,111 @@ WHERE 1 = 1
 		"size": size,
 		"employees": employees
 	}
+ 
+def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Tạo nhân viên mới + lương trong cả 2 DB (SQL Server + MySQL) trong 1 transaction thủ công.
+    - SQL Server: insert nhân viên, ID tự động tăng
+    - MySQL: insert nhân viên + salary, dùng EmployeeID từ SQL Server
+    - Kiểm tra EmployeeID trên MySQL để tránh duplicate key
+    """
+    vendors = ["sqlserver", "mysql"]
+    connections = {}
+    cursors = {}
+    employee_id = None
+
+    try:
+        # Mở kết nối và bắt đầu transaction
+        for v in vendors:
+            conn = _get_connection(v)
+            conn.autocommit = False
+            connections[v] = conn
+            cursors[v] = conn.cursor()
+
+        # --- SQL SERVER INSERT ---
+        cursor_sql = cursors["sqlserver"]
+        placeholder_sql = _placeholder("sqlserver")
+
+        full_name = data.get("FullName")
+        dept_id = data.get("DepartmentID")
+        pos_id = data.get("PositionID")
+        status = data.get("Status", "Thực tập")
+        email = data.get("Email")
+        dob_str = data.get("DateOfBirth")
+        date_of_birth = datetime.datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else datetime.date(2000,1,1)
+        hire_date = datetime.date.today()
+
+        insert_sql = f"""
+        INSERT INTO employees (FullName, DepartmentID, PositionID, Email, Status, DateOfBirth, HireDate)
+        OUTPUT INSERTED.EmployeeID
+        VALUES ({placeholder_sql},{placeholder_sql},{placeholder_sql},{placeholder_sql},{placeholder_sql},{placeholder_sql},{placeholder_sql})
+        """
+        cursor_sql.execute(insert_sql, (full_name, dept_id, pos_id, email, status, date_of_birth, hire_date))
+        
+        # Lấy EmployeeID vừa tạo từ OUTPUT clause
+        row = cursor_sql.fetchone()
+        if not row or row[0] is None:
+            raise Exception("Không lấy được employee_id từ SQL Server")
+        employee_id = int(row[0])
+
+        # --- MYSQL CHECK EMPLOYEEID ---
+        cursor_mysql = cursors["mysql"]
+        placeholder_mysql = _placeholder("mysql")
+
+        cursor_mysql.execute(f"SELECT COUNT(*) FROM employees WHERE EmployeeID = {placeholder_mysql}", (employee_id,))
+        count = cursor_mysql.fetchone()[0]
+        if count > 0:
+            raise Exception(f"EmployeeID {employee_id} đã tồn tại trên MySQL, không thể insert")
+
+        # --- MYSQL INSERT EMPLOYEE ---
+        insert_mysql = f"""
+        INSERT INTO employees (EmployeeID, FullName, DepartmentID, PositionID, Status)
+        VALUES ({placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql})
+        """
+        cursor_mysql.execute(insert_mysql, (employee_id, full_name, dept_id, pos_id, status))
+
+        # --- MYSQL INSERT SALARY ---
+        salary = float(data.get("Salary", 0))
+        salary_date = datetime.date.today().replace(day=1)
+        bonus = 0.0
+        deductions = 0.0
+        net_salary = salary + bonus - deductions
+
+        insert_salary = f"""
+        INSERT INTO salaries (EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary)
+        VALUES ({placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql})
+        """
+        cursor_mysql.execute(insert_salary, (employee_id, salary_date, salary, bonus, deductions, net_salary))
+
+        # Commit cả 2 DB
+        connections["sqlserver"].commit()
+        connections["mysql"].commit()
+
+        return {
+            "EmployeeID": employee_id,
+            "FullName": full_name,
+            "DepartmentID": dept_id,
+            "PositionID": pos_id,
+            "Status": status,
+            "Salary": {
+                "BasicSalary": salary,
+                "Bonus": bonus,
+                "Deduction": deductions,
+                "SalaryDate": salary_date.strftime("%Y-%m-%d"),
+                "TotalSalary": net_salary
+            }
+        }
+
+    except Exception as e:
+        # Rollback cả 2 DB nếu lỗi
+        for conn in connections.values():
+            try:
+                conn.rollback()
+            except:
+                pass
+        raise Exception(f"Lỗi khi thêm nhân viên mới: {e}")
+
+    finally:
+        # Đóng kết nối
+        for conn in connections.values():
+            conn.close()
