@@ -100,6 +100,7 @@ SELECT
 	e.Status,
 	e.Email,
 	e.PhoneNumber,
+  	e.HireDate,
 	d.DepartmentName,
 	p.PositionName
 FROM employees e
@@ -156,6 +157,7 @@ WHERE 1 = 1
 			"PhoneNumber": row.get("PhoneNumber"),
 			"PositionName": row.get("PositionName"),
 			"Status": row.get("Status"),
+      		"HireDate": row.get("HireDate").strftime("%Y-%m-%d") if row.get("HireDate") else None,
 			"Salary": salary_map.get(employee_id)
 		}
 		employees.append(employee)
@@ -168,12 +170,6 @@ WHERE 1 = 1
 	}
  
 def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Tạo nhân viên mới + lương trong cả 2 DB (SQL Server + MySQL) trong 1 transaction thủ công.
-    - SQL Server: insert nhân viên, ID tự động tăng
-    - MySQL: insert nhân viên + salary, dùng EmployeeID từ SQL Server
-    - Kiểm tra EmployeeID trên MySQL để tránh duplicate key
-    """
     vendors = ["sqlserver", "mysql"]
     connections = {}
     cursors = {}
@@ -252,6 +248,7 @@ def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
             "DepartmentID": dept_id,
             "PositionID": pos_id,
             "Status": status,
+            "HireDate": hire_date.strftime("%Y-%m-%d"),
             "Salary": {
                 "BasicSalary": salary,
                 "Bonus": bonus,
