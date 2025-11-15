@@ -117,7 +117,7 @@ def update_position(position_id: int, name: str):
         conn_mysql.close()
 
 def delete_position(position_id: int) -> int:
-    """Xóa chức vụ trên cả SQL Server và MySQL"""
+    """Xóa chức vụ nhưng không xóa nhân viên — tự cascade bằng code (KHÔNG sửa DB)"""
     conn_sqlserver = get_sqlserver_connection()
     conn_mysql = get_mysql_connection()
     try:
@@ -127,19 +127,30 @@ def delete_position(position_id: int) -> int:
         conn_sqlserver.autocommit = False
         conn_mysql.autocommit = False
 
-        # SQL Server
-        query_sql = f"DELETE FROM positions WHERE PositionID = {_placeholder('sqlserver')}"
-        cursor_sql.execute(query_sql, (position_id,))
+        # STEP 1: Set NULL cho Employees trước (tránh lỗi FK)
+        cursor_sql.execute(
+            "UPDATE employees SET PositionID = NULL WHERE PositionID = ?",
+            (position_id,)
+        )
+        cursor_my.execute(
+            "UPDATE employees SET PositionID = NULL WHERE PositionID = %s",
+            (position_id,)
+        )
 
-        # MySQL
-        query_my = f"DELETE FROM positions WHERE PositionID = {_placeholder('mysql')}"
-        cursor_my.execute(query_my, (position_id,))
+        # STEP 2: Xóa position
+        cursor_sql.execute(
+            "DELETE FROM positions WHERE PositionID = ?",
+            (position_id,)
+        )
+        cursor_my.execute(
+            "DELETE FROM positions WHERE PositionID = %s",
+            (position_id,)
+        )
 
-        # Commit cả 2 DB
         conn_sqlserver.commit()
         conn_mysql.commit()
-
         return cursor_sql.rowcount
+
     except Exception as e:
         conn_sqlserver.rollback()
         conn_mysql.rollback()

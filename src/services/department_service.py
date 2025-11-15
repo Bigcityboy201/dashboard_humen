@@ -134,7 +134,6 @@ def update_department(department_id: int, name: str) -> int:
         conn_sqlserver.close()
         conn_mysql.close()
 
-
 def delete_department(department_id: int) -> int:
     conn_sqlserver = get_sqlserver_connection()
     conn_mysql = get_mysql_connection()
@@ -142,22 +141,30 @@ def delete_department(department_id: int) -> int:
         cursor_sql = conn_sqlserver.cursor()
         cursor_my = conn_mysql.cursor()
 
-        # Xóa SQL Server
+        # STEP 1: SET NULL cho Employee.DepartmentID trước khi xóa
+        cursor_sql.execute(
+            "UPDATE employees SET DepartmentID = NULL WHERE DepartmentID = ?", 
+            (department_id,)
+        )
+        cursor_my.execute(
+            "UPDATE employees SET DepartmentID = NULL WHERE DepartmentID = %s", 
+            (department_id,)
+        )
+
+        # STEP 2: XÓA department
         cursor_sql.execute(
             "DELETE FROM departments WHERE DepartmentID = ?", 
             (department_id,)
         )
-
-        # Xóa MySQL
         cursor_my.execute(
             "DELETE FROM departments WHERE DepartmentID = %s", 
             (department_id,)
         )
 
-        # Commit cả 2 DB
         conn_sqlserver.commit()
         conn_mysql.commit()
-        return 1
+        return cursor_sql.rowcount
+
     except Exception as e:
         conn_sqlserver.rollback()
         conn_mysql.rollback()
