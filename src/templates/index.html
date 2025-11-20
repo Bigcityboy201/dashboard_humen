@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Nhân viên</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <li><a href="/" class="active">Trang chủ</a></li>
+                <li><a href="/employees">Nhân viên</a></li>
+                <li><a href="/departments">Phòng ban</a></li>
+                <li><a href="/positions">Chức vụ</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">Chào mừng đến với Hệ thống Quản lý Nhân viên</h1>
+            </div>
+            <div style="padding: 2rem 0;">
+                <p style="font-size: 1.125rem; margin-bottom: 2rem; color: var(--text-secondary);">
+                    Hệ thống quản lý nhân viên toàn diện với đầy đủ các chức năng CRUD cho nhân viên, phòng ban và chức vụ.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/employees'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">👥 Quản lý Nhân viên</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Xem, thêm, sửa, xóa thông tin nhân viên. Quản lý lương và thông tin cá nhân.
+                        </p>
+                        <a href="/employees" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/departments'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">🏢 Quản lý Phòng ban</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý các phòng ban trong công ty. Thêm, sửa, xóa thông tin phòng ban.
+                        </p>
+                        <a href="/departments" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/positions'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💼 Quản lý Chức vụ</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý các chức vụ trong công ty. Thêm, sửa, xóa thông tin chức vụ.
+                        </p>
+                        <a href="/positions" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">📊 Thống kê nhanh</h2>
+            <div id="stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);" id="total-employees">-</div>
+                    <div style="color: var(--text-secondary);">Tổng nhân viên</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);" id="total-departments">-</div>
+                    <div style="color: var(--text-secondary);">Tổng phòng ban</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);" id="total-positions">-</div>
+                    <div style="color: var(--text-secondary);">Tổng chức vụ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script>
+        // Load thống kê
+        async function loadStats() {
+            try {
+                const [employeesRes, departmentsRes, positionsRes] = await Promise.all([
+                    EmployeesAPI.getAll({ size: 1 }),
+                    DepartmentsAPI.getAll(),
+                    PositionsAPI.getAll()
+                ]);
+
+                if (employeesRes.success) {
+                    document.getElementById('total-employees').textContent = employeesRes.data.total_records || 0;
+                }
+                if (departmentsRes.success) {
+                    document.getElementById('total-departments').textContent = departmentsRes.data.length || 0;
+                }
+                if (positionsRes.success) {
+                    document.getElementById('total-positions').textContent = positionsRes.data.length || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        loadStats();
+    </script>
+</body>
+</html>
+

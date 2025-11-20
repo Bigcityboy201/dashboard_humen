@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý Phòng ban</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}"
+    />
+  </head>
+  <body class="departments-page">
+    <nav class="navbar">
+      <div class="navbar-container">
+        <a href="/" class="navbar-brand">🏢 HR Management System</a>
+        <ul class="navbar-nav">
+          <li><a href="/">Trang chủ</a></li>
+          <li><a href="/employees">Nhân viên</a></li>
+          <li><a href="/departments" class="active">Phòng ban</a></li>
+          <li><a href="/positions">Chức vụ</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h1 class="card-title">🏢 Quản lý Phòng ban</h1>
+          <button class="btn btn-primary" onclick="openDepartmentModal()">
+            + Thêm phòng ban
+          </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading" style="display: none">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên phòng ban</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="departments-table-body">
+              <tr>
+                <td colspan="3" class="empty-state">
+                  <div class="spinner"></div>
+                  <p>Đang tải dữ liệu...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Department Modal -->
+    <div id="departmentModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-title">Thêm phòng ban mới</h2>
+          <button class="modal-close" onclick="closeDepartmentModal()">
+            &times;
+          </button>
+        </div>
+        <form id="departmentForm" onsubmit="saveDepartment(event)">
+          <input type="hidden" id="department-id" />
+
+          <div class="form-group">
+            <label class="form-label">Tên phòng ban *</label>
+            <input
+              type="text"
+              id="department-name"
+              class="form-control"
+              required
+            />
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeDepartmentModal()"
+            >
+              Hủy
+            </button>
+            <button type="submit" class="btn btn-primary">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/departments.js') }}"></script>
+  </body>
+</html>

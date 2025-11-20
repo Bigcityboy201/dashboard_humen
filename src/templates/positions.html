@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Chức vụ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="positions-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Trang chủ</a></li>
+                <li><a href="/employees">Nhân viên</a></li>
+                <li><a href="/departments">Phòng ban</a></li>
+                <li><a href="/positions" class="active">Chức vụ</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">💼 Quản lý Chức vụ</h1>
+                <button class="btn btn-primary" onclick="openPositionModal()">+ Thêm chức vụ</button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên chức vụ</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positions-table-body">
+                        <tr>
+                            <td colspan="3" class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Position Modal -->
+    <div id="positionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Thêm chức vụ mới</h2>
+                <button class="modal-close" onclick="closePositionModal()">&times;</button>
+            </div>
+            <form id="positionForm" onsubmit="savePosition(event)">
+                <input type="hidden" id="position-id">
+                
+                <div class="form-group">
+                    <label class="form-label">Tên chức vụ *</label>
+                    <input type="text" id="position-name" class="form-control" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closePositionModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/positions.js') }}"></script>
+</body>
+</html>
+

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Nhân viên</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="employees-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Trang chủ</a></li>
+                <li><a href="/employees" class="active">Nhân viên</a></li>
+                <li><a href="/departments">Phòng ban</a></li>
+                <li><a href="/positions">Chức vụ</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">👥 Quản lý Nhân viên</h1>
+                <button class="btn btn-primary" onclick="openEmployeeModal()">+ Thêm nhân viên</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="form-label">Phòng ban</label>
+                    <select id="filter-department" class="form-control" onchange="loadEmployees()">
+                        <option value="">Tất cả</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select id="filter-status" class="form-control" onchange="loadEmployees()">
+                        <option value="">Tất cả</option>
+                        <option value="Đang làm việc">Đang làm việc</option>
+                        <option value="Nghỉ việc">Nghỉ việc</option>
+                        <option value="Thực tập">Thực tập</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-secondary" onclick="resetFilters()">Xóa bộ lọc</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Phòng ban</th>
+                            <th>Chức vụ</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày vào làm</th>
+                            <th>Lương</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employees-table-body">
+                        <tr>
+                            <td colspan="10" class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <!-- Employee Detail Modal -->
+    <div id="employeeDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Chi tiết nhân viên</h2>
+                <button class="modal-close" onclick="closeEmployeeDetailModal()">&times;</button>
+            </div>
+            <div id="employee-detail-content" style="padding: 1.5rem;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Đang tải thông tin...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEmployeeDetailModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Thêm nhân viên mới</h2>
+                <button class="modal-close" onclick="closeEmployeeModal()">&times;</button>
+            </div>
+            <form id="employeeForm" onsubmit="saveEmployee(event)">
+                <input type="hidden" id="employee-id">
+                
+                <div class="form-group">
+                    <label class="form-label">Họ và tên *</label>
+                    <input type="text" id="full-name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="tel" id="phone-number" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ngày sinh</label>
+                    <input type="date" id="date-of-birth" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Giới tính</label>
+                    <select id="gender" class="form-control">
+                        <option value="">Chọn giới tính</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phòng ban *</label>
+                    <select id="department-id" class="form-control" required>
+                        <option value="">Chọn phòng ban</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Chức vụ *</label>
+                    <select id="position-id" class="form-control" required>
+                        <option value="">Chọn chức vụ</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Trạng thái *</label>
+                    <select id="status" class="form-control" required>
+                        <option value="Thực tập">Thực tập</option>
+                        <option value="Đang làm việc">Đang làm việc</option>
+                        <option value="Nghỉ việc">Nghỉ việc</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="salary-group">
+                    <label class="form-label">Lương khởi điểm (VND)</label>
+                    <input type="number" id="salary" class="form-control" min="0" step="1000">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeEmployeeModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/employees.js') }}"></script>
+</body>
+</html>
+
