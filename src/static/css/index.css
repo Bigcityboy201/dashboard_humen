@@ -1,0 +1,22 @@
+/* Index Page Specific Styles */
+
+/* Dashboard cards hover effect */
+.index-page .card[onclick] {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.index-page .card[onclick]:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Stats cards */
+.index-page #stats > div {
+    transition: all 0.2s;
+}
+
+.index-page #stats > div:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow);
+}
+

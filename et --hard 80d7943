@@ -1,0 +1,45 @@
+[33m336bf17[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdeveloper[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/developer[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: reset: moving to origin/main
+[33m80d7943[m HEAD@{1}: commit: Fix CSS connection issue by ensuring proper static file serving in Flask app
+[33m9f6f3f2[m HEAD@{2}: merge nhi: Merge made by the 'ort' strategy.
+[33m815fd6c[m HEAD@{3}: checkout: moving from nhi to developer
+[33mbc3f814[m[33m ([m[1;31morigin/nhi[m[33m, [m[1;32mnhi[m[33m)[m HEAD@{4}: pull origin nhi: Fast-forward
+[33mbae4d7a[m[33m ([m[1;31morigin/giang[m[33m, [m[1;32mmain[m[33m)[m HEAD@{5}: checkout: moving from developer to nhi
+[33m815fd6c[m HEAD@{6}: pull origin developer: Merge made by the 'ort' strategy.
+[33m29cffe5[m HEAD@{7}: commit: feat(department/position):fix delete department/position
+[33ma1882cd[m HEAD@{8}: checkout: moving from main to developer
+[33mbae4d7a[m[33m ([m[1;31morigin/giang[m[33m, [m[1;32mmain[m[33m)[m HEAD@{9}: checkout: moving from nhi to main
+[33mbae4d7a[m[33m ([m[1;31morigin/giang[m[33m, [m[1;32mmain[m[33m)[m HEAD@{10}: checkout: moving from main to nhi
+[33mbae4d7a[m[33m ([m[1;31morigin/giang[m[33m, [m[1;32mmain[m[33m)[m HEAD@{11}: merge nhi: Fast-forward
+[33m824eb32[m HEAD@{12}: checkout: moving from nhi to main
+[33mbae4d7a[m[33m ([m[1;31morigin/giang[m[33m, [m[1;32mmain[m[33m)[m HEAD@{13}: checkout: moving from main to nhi
+[33m824eb32[m HEAD@{14}: merge developer: Merge made by the 'ort' strategy.
+[33ma6858c0[m HEAD@{15}: checkout: moving from developer to main
+[33ma1882cd[m HEAD@{16}: commit: feat(employees):add api saveEmployee
+[33m0b55f61[m HEAD@{17}: checkout: moving from main to developer
+[33ma6858c0[m HEAD@{18}: merge developer: Merge made by the 'ort' strategy.
+[33m5eb6578[m HEAD@{19}: checkout: moving from main to main
+[33m5eb6578[m HEAD@{20}: checkout: moving from developer to main
+[33m0b55f61[m HEAD@{21}: commit: chore: remove tracked __pycache__ files
+[33mdbf5e9c[m HEAD@{22}: checkout: moving from main to developer
+[33m5eb6578[m HEAD@{23}: reset: moving to HEAD
+[33m5eb6578[m HEAD@{24}: checkout: moving from developer to main
+[33mdbf5e9c[m HEAD@{25}: commit: feat(employee): add latest salary to employee response
+[33m7ec9a24[m HEAD@{26}: checkout: moving from main to developer
+[33m5eb6578[m HEAD@{27}: commit: chore: remove tracked __pycache__ and .pyc files
+[33m9fe4dee[m HEAD@{28}: checkout: moving from developer to main
+[33m7ec9a24[m HEAD@{29}: commit: feat: add employee salary API
+[33m9fe4dee[m HEAD@{30}: checkout: moving from main to developer
+[33m9fe4dee[m HEAD@{31}: merge developer: Fast-forward
+[33m6c3baa1[m HEAD@{32}: checkout: moving from developer to main
+[33m9fe4dee[m HEAD@{33}: commit: feat(add run.sh):script for simplified startup process
+[33m6c3baa1[m HEAD@{34}: checkout: moving from main to developer
+[33m6c3baa1[m HEAD@{35}: merge developer: Fast-forward
+[33m834c7a8[m HEAD@{36}: checkout: moving from developer to main
+[33m6c3baa1[m HEAD@{37}: commit: feat(add .gitignore):
+[33m834c7a8[m HEAD@{38}: checkout: moving from main to developer
+[33m834c7a8[m HEAD@{39}: merge developer: Fast-forward
+[33mcd94497[m HEAD@{40}: checkout: moving from developer to main
+[33m834c7a8[m HEAD@{41}: pull origin developer --rebase (finish): returning to refs/heads/developer
+[33m834c7a8[m HEAD@{42}: pull origin developer --rebase (pick): feat(employee):finish getAllEmployee
+[33mcd94497[m HEAD@{43}: pull origin developer --rebase (start): checkout cd9449763e8965d70c3a7c43321fc89edde8f2c6
+[33m34dc7d6[m HEAD@{44}: commit (initial): feat(employee):finish getAllEmployee

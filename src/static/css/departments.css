@@ -1,0 +1,35 @@
+/* Departments Page Specific Styles */
+
+.departments-page .card-header {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05));
+    border-radius: 0.5rem 0.5rem 0 0;
+    padding: 1.5rem 2rem;
+}
+
+.departments-page .table thead {
+    background: linear-gradient(135deg, var(--success-color), #059669);
+    color: white;
+}
+
+.departments-page .table th {
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 1rem;
+}
+
+.departments-page .table tbody tr:hover {
+    background-color: rgba(16, 185, 129, 0.05);
+}
+
+/* Responsive for departments page */
+@media (max-width: 768px) {
+    .departments-page .table th,
+    .departments-page .table td {
+        font-size: 0.7rem;
+        padding: 0.75rem 0.5rem;
+    }
+}
+
