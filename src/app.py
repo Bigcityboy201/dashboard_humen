@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from typing import Tuple
 
+
 # Load biến môi trường từ file .env
 load_dotenv()
 
@@ -13,6 +14,8 @@ from routes.employees import employees_bp
 # Bạn sẽ thêm các module khác sau: payroll_bp, attendance_bp, v.v.
 from routes.departments import departments_bp
 from routes.positions import positions_bp
+from routes.salaries import salaries_bp
+from routes.dividends import dividends_bp
 
 
 from utils.response import wrap_success, wrap_error
@@ -34,10 +37,11 @@ def create_app():
     app.config['SQL_SERVER_CONN_STRING'] = os.getenv("SQL_SERVER_CONN_STRING")  # nếu dùng SQL Server
 
     # 2. Đăng ký Blueprint
-    app.register_blueprint(employees_bp)
-    
+    app.register_blueprint(employees_bp) 
     app.register_blueprint(departments_bp)
     app.register_blueprint(positions_bp)
+    app.register_blueprint(salaries_bp)
+    app.register_blueprint(dividends_bp)
 
     # 3. Xử lý lỗi 404
     @app.errorhandler(404)
@@ -121,4 +125,5 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
+
