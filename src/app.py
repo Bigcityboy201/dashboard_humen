@@ -16,7 +16,7 @@ from routes.departments import departments_bp
 from routes.positions import positions_bp
 from routes.salaries import salaries_bp
 from routes.dividends import dividends_bp
-
+from routes.attendance import attendance_bp
 
 from utils.response import wrap_success, wrap_error
 from clients.java_client import JavaClient
@@ -42,6 +42,7 @@ def create_app():
     app.register_blueprint(positions_bp)
     app.register_blueprint(salaries_bp)
     app.register_blueprint(dividends_bp)
+    app.register_blueprint(attendance_bp)
 
     # 3. Xử lý lỗi 404
     @app.errorhandler(404)
