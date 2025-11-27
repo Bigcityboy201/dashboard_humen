@@ -7,6 +7,19 @@ let positions = [];
 document.addEventListener('DOMContentLoaded', async () => {
     await loadDepartments();
     await loadPositions();
+    
+    // Check URL params for filters
+    const urlParams = new URLSearchParams(window.location.search);
+    const departmentId = urlParams.get('department_id');
+    const positionId = urlParams.get('position_id');
+    
+    if (departmentId) {
+        document.getElementById('filter-department').value = departmentId;
+    }
+    if (positionId) {
+        document.getElementById('filter-position').value = positionId;
+    }
+    
     await loadEmployees();
 });
 
@@ -39,16 +52,19 @@ async function loadPositions() {
     if (result.success) {
         positions = result.data;
         const select = document.getElementById('position-id');
+        const filterSelect = document.getElementById('filter-position');
         
         // Clear options
         select.innerHTML = '<option value="">Chọn chức vụ</option>';
+        filterSelect.innerHTML = '<option value="">Tất cả</option>';
         
         // Add options
         positions.forEach(pos => {
             const option = document.createElement('option');
             option.value = pos.PositionID;
             option.textContent = pos.PositionName;
-            select.appendChild(option);
+            select.appendChild(option.cloneNode(true));
+            filterSelect.appendChild(option);
         });
     }
 }
@@ -63,14 +79,18 @@ async function loadEmployees(page = 1) {
     tableBody.innerHTML = '';
 
     const departmentId = document.getElementById('filter-department').value;
+    const positionId = document.getElementById('filter-position').value;
     const status = document.getElementById('filter-status').value;
+    const keyword = document.getElementById('filter-keyword').value.trim();
 
     const params = {
         page: currentPage,
         size: pageSize
     };
     if (departmentId) params.department_id = parseInt(departmentId);
+    if (positionId) params.position_id = parseInt(positionId);
     if (status) params.status = status;
+    if (keyword) params.keyword = keyword;
 
     const result = await EmployeesAPI.getAll(params);
 
@@ -157,8 +177,28 @@ function renderPagination(totalPages, currentPage) {
 // Reset filters
 function resetFilters() {
     document.getElementById('filter-department').value = '';
+    document.getElementById('filter-position').value = '';
     document.getElementById('filter-status').value = '';
+    document.getElementById('filter-keyword').value = '';
     loadEmployees(1);
+}
+
+// Handle keyword search with debounce
+let keywordSearchTimeout;
+function handleKeywordSearch(event) {
+    // Clear previous timeout
+    clearTimeout(keywordSearchTimeout);
+    
+    // Set new timeout to search after user stops typing (500ms)
+    keywordSearchTimeout = setTimeout(() => {
+        loadEmployees(1);
+    }, 500);
+    
+    // If Enter key is pressed, search immediately
+    if (event.key === 'Enter') {
+        clearTimeout(keywordSearchTimeout);
+        loadEmployees(1);
+    }
 }
 
 // Get status color (for backward compatibility)

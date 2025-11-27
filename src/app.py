@@ -36,7 +36,7 @@ def create_app():
     app.config['JAVA_BASE_URL'] = os.getenv('JAVA_BASE_URL', 'http://localhost:8080')
     app.config['SQL_SERVER_CONN_STRING'] = os.getenv("SQL_SERVER_CONN_STRING")  # nếu dùng SQL Server
 
-    # 2. Đăng ký Blueprint
+    # 2. Đăng ký Blueprint (API routes) trước
     app.register_blueprint(employees_bp) 
     app.register_blueprint(departments_bp)
     app.register_blueprint(positions_bp)
@@ -44,10 +44,61 @@ def create_app():
     app.register_blueprint(dividends_bp)
     app.register_blueprint(attendance_bp)
 
+    # 3. Đăng ký route HTML sau (để ưu tiên render HTML khi truy cập từ browser)
+    # Trong Flask, route được match theo thứ tự LIFO (Last In First Out)
+    @app.route('/')
+    def index():
+        return render_template('index.html')
+
+    @app.route('/employees')
+    def employees_page():
+        return render_template('employees.html')
+
+    @app.route('/departments')
+    def departments_page():
+        return render_template('departments.html')
+
+    @app.route('/positions')
+    def positions_page():
+        return render_template('positions.html')
+
+    @app.route('/salaries')
+    def salaries_page():
+        return render_template('salaries.html')
+
+    @app.route('/attendance')
+    def attendance_page():
+        return render_template('attendance.html')
+
+    @app.route('/dividends')
+    def dividends_page():
+        return render_template('dividends.html')
+
     # 3. Xử lý lỗi 404
     @app.errorhandler(404)
     def page_not_found(e):
         trace_id = getattr(g, 'trace_id', None)
+        
+        # Xử lý đặc biệt cho browser request (có Accept: text/html)
+        accept_header = request.headers.get('Accept', '')
+        if 'text/html' in accept_header and 'application/json' not in accept_header:
+            # Render HTML tương ứng cho các route
+            if request.path == '/':
+                return render_template('index.html'), 200
+            elif request.path == '/employees':
+                return render_template('employees.html'), 200
+            elif request.path == '/departments':
+                return render_template('departments.html'), 200
+            elif request.path == '/positions':
+                return render_template('positions.html'), 200
+            elif request.path == '/salaries':
+                return render_template('salaries.html'), 200
+            elif request.path == '/attendance':
+                return render_template('attendance.html'), 200
+            elif request.path == '/dividends':
+                return render_template('dividends.html'), 200
+        
+        # Trả về JSON cho tất cả các trường hợp khác
         return jsonify(
             wrap_error(
                 code='NOT_FOUND',
@@ -101,24 +152,6 @@ def create_app():
         ), status_code or 500
 
    
-    
-    # Route cho trang chủ
-    @app.route('/')
-    def index():
-        return render_template('index.html')
-
-    # Route cho các trang quản lý
-    @app.route('/employees')
-    def employees_page():
-        return render_template('employees.html')
-
-    @app.route('/departments')
-    def departments_page():
-        return render_template('departments.html')
-
-    @app.route('/positions')
-    def positions_page():
-        return render_template('positions.html')
     return app
 
 

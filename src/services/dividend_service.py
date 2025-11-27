@@ -1,31 +1,18 @@
-import os
-from typing import Any, Dict, List, Tuple, Optional
-from config.sqlserver_connection import get_sqlserver_connection
-from config.mysql_connection import get_mysql_connection
 import datetime
+from typing import Any, Dict, List, Optional
+from config.sqlserver_connection import get_sqlserver_connection
 
 # ------------------- Helper -------------------
 
-def get_salary_db_vendor() -> str:
-    """Trả về vendor cho salary database"""
-    return os.environ.get("SALARY_DB_VENDOR", "mysql").strip().lower()
+def _placeholder() -> str:
+    """Placeholder cho SQL Server"""
+    return "?"
 
-def _get_connection(vendor: str):
-    """Tạo connection DB"""
-    if vendor == "mysql":
-        return get_mysql_connection()
-    return get_sqlserver_connection()
-
-def _placeholder(vendor: str) -> str:
-    """Placeholder theo vendor"""
-    return "?" if vendor == "sqlserver" else "%s"
-
-def fetch_data_from_db(sql_query: str, params: Tuple[Any, ...], vendor: str | None = None) -> List[Dict[str, Any]]:
-    """Lấy danh sách dữ liệu"""
+def fetch_data_from_db(sql_query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    """Lấy danh sách dữ liệu từ SQL Server"""
     conn = None
-    actual_vendor = vendor or get_salary_db_vendor()
     try:
-        conn = _get_connection(actual_vendor)
+        conn = get_sqlserver_connection()
         cursor = conn.cursor()
         cursor.execute(sql_query, params)
         columns = [col[0] for col in cursor.description]
@@ -37,134 +24,121 @@ def fetch_data_from_db(sql_query: str, params: Tuple[Any, ...], vendor: str | No
 # ------------------- Dividend Service -------------------
 
 def get_dividends() -> List[Dict[str, Any]]:
-    """Lấy danh sách các đợt chi cổ tức (chỉ từ MySQL)"""
-    vendor = get_salary_db_vendor()
-    
+    """Lấy danh sách các đợt chi cổ tức từ SQL Server"""
     query = """
     SELECT DividendID, EmployeeID, DividendAmount, DividendDate, CreatedAt
     FROM dividends 
     ORDER BY DividendDate DESC, DividendID
     """
-    
-    return fetch_data_from_db(query, (), vendor)
+    return fetch_data_from_db(query)
 
 def create_dividend(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Thêm mới một đợt chi cổ tức và đồng bộ cả 2 DB"""
-    conn_sqlserver = get_sqlserver_connection()
-    conn_mysql = get_mysql_connection()
-    
+    """Thêm mới một đợt chi cổ tức vào SQL Server"""
+    conn = get_sqlserver_connection()
     try:
-        cursor_sql = conn_sqlserver.cursor()
-        cursor_my = conn_mysql.cursor()
+        cursor = conn.cursor()
+        conn.autocommit = False
 
-        # Bắt đầu transaction
-        conn_sqlserver.autocommit = False
-        conn_mysql.autocommit = False
-
-        # Dữ liệu từ request
         employee_id = data.get("EmployeeID")
         dividend_amount = data.get("DividendAmount", 0.0)
         dividend_date = data.get("DividendDate", datetime.datetime.now().strftime("%Y-%m-%d"))
 
-        # Thêm vào SQL Server và lấy ID
-        query_sql = f"""
-        INSERT INTO dividends (EmployeeID, DividendAmount, DividendDate) 
-        OUTPUT INSERTED.DividendID, INSERTED.EmployeeID, INSERTED.DividendAmount, 
+        query = f"""
+        INSERT INTO dividends (EmployeeID, DividendAmount, DividendDate)
+        OUTPUT INSERTED.DividendID, INSERTED.EmployeeID, INSERTED.DividendAmount,
                INSERTED.DividendDate, INSERTED.CreatedAt
-        VALUES ({_placeholder('sqlserver')}, {_placeholder('sqlserver')}, {_placeholder('sqlserver')})
+        VALUES ({_placeholder()}, {_placeholder()}, {_placeholder()})
         """
-        cursor_sql.execute(query_sql, (employee_id, dividend_amount, dividend_date))
-        
-        # Lấy kết quả từ SQL Server
-        sql_result = cursor_sql.fetchone()
-        if not sql_result:
-            raise Exception("Không lấy được dữ liệu từ SQL Server sau khi insert")
-            
-        dividend_id = sql_result[0]
-        columns = [col[0] for col in cursor_sql.description]
-        dividend_data = dict(zip(columns, sql_result))
+        cursor.execute(query, (employee_id, dividend_amount, dividend_date))
+        result = cursor.fetchone()
+        if not result:
+            raise Exception("Không lấy được dữ liệu sau khi insert")
 
-        # Thêm vào MySQL với cùng ID
-        query_my = f"""
-        INSERT INTO dividends (DividendID, EmployeeID, DividendAmount, DividendDate)
-        VALUES ({_placeholder('mysql')}, {_placeholder('mysql')}, {_placeholder('mysql')}, {_placeholder('mysql')})
-        """
-        cursor_my.execute(query_my, (dividend_id, employee_id, dividend_amount, dividend_date))
-
-        # Commit cả 2 DB
-        conn_sqlserver.commit()
-        conn_mysql.commit()
-
-        return {
-            **dividend_data,
-            "message": "Dividend record created"
-        }
+        columns = [col[0] for col in cursor.description]
+        conn.commit()
+        return {**dict(zip(columns, result)), "message": "Dividend record created"}
 
     except Exception as e:
-        conn_sqlserver.rollback()
-        conn_mysql.rollback()
+        conn.rollback()
         raise e
     finally:
-        cursor_sql.close()
-        cursor_my.close()
-        conn_sqlserver.close()
-        conn_mysql.close()
+        cursor.close()
+        conn.close()
 
 def get_dividend_by_id(dividend_id: int) -> Optional[Dict[str, Any]]:
     """Lấy chi tiết đợt chi cổ tức theo ID"""
-    vendor = get_salary_db_vendor()
-    placeholder = _placeholder(vendor)
-    
-    query = f"""
+    query = """
     SELECT DividendID, EmployeeID, DividendAmount, DividendDate, CreatedAt
-    FROM dividends 
-    WHERE DividendID = {placeholder}
+    FROM dividends
+    WHERE DividendID = ?
     """
-    
-    result = fetch_data_from_db(query, (dividend_id,), vendor)
+    result = fetch_data_from_db(query, (dividend_id,))
     return result[0] if result else None
 
 def delete_dividend(dividend_id: int) -> Dict[str, Any]:
-    """Xóa đợt chi cổ tức trên cả 2 DB"""
-    conn_sqlserver = get_sqlserver_connection()
-    conn_mysql = get_mysql_connection()
-    
+    """Xóa đợt chi cổ tức trên SQL Server"""
+    conn = get_sqlserver_connection()
     try:
-        cursor_sql = conn_sqlserver.cursor()
-        cursor_my = conn_mysql.cursor()
+        cursor = conn.cursor()
+        conn.autocommit = False
 
-        # Bắt đầu transaction
-        conn_sqlserver.autocommit = False
-        conn_mysql.autocommit = False
-
-        # Lấy thông tin trước khi xóa
         dividend_record = get_dividend_by_id(dividend_id)
         if not dividend_record:
             raise Exception("Không tìm thấy bản ghi cổ tức")
 
-        # Xóa từ SQL Server
-        query_sql = f"DELETE FROM dividends WHERE DividendID = {_placeholder('sqlserver')}"
-        cursor_sql.execute(query_sql, (dividend_id,))
+        query = "DELETE FROM dividends WHERE DividendID = ?"
+        cursor.execute(query, (dividend_id,))
 
-        # Xóa từ MySQL
-        query_my = f"DELETE FROM dividends WHERE DividendID = {_placeholder('mysql')}"
-        cursor_my.execute(query_my, (dividend_id,))
-
-        # Commit cả 2 DB
-        conn_sqlserver.commit()
-        conn_mysql.commit()
-
+        conn.commit()
         return {
             "message": f"Dividend record with ID {dividend_id} deleted successfully",
             "deleted_record": dividend_record
         }
 
     except Exception as e:
-        conn_sqlserver.rollback()
-        conn_mysql.rollback()
+        conn.rollback()
         raise e
     finally:
-        cursor_sql.close()
-        cursor_my.close()
-        conn_sqlserver.close()
-        conn_mysql.close()
+        cursor.close()
+        conn.close()
+def update_dividend_record(dividend_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Cập nhật thông tin một đợt chi cổ tức trong SQL Server"""
+    conn = get_sqlserver_connection()
+    try:
+        cursor = conn.cursor()
+        conn.autocommit = False
+
+        # Lấy bản ghi hiện tại
+        existing = get_dividend_by_id(dividend_id)
+        if not existing:
+            raise Exception("Không tìm thấy bản ghi cổ tức")
+
+        # Dữ liệu mới
+        employee_id = data.get("EmployeeID", existing["EmployeeID"])
+        dividend_amount = data.get("DividendAmount", existing["DividendAmount"])
+        dividend_date = data.get("DividendDate", existing["DividendDate"])
+
+        query = f"""
+        UPDATE dividends
+        SET EmployeeID = {_placeholder()},
+            DividendAmount = {_placeholder()},
+            DividendDate = {_placeholder()}
+        OUTPUT INSERTED.DividendID, INSERTED.EmployeeID, INSERTED.DividendAmount,
+               INSERTED.DividendDate, INSERTED.CreatedAt
+        WHERE DividendID = {_placeholder()}
+        """
+        cursor.execute(query, (employee_id, dividend_amount, dividend_date, dividend_id))
+        result = cursor.fetchone()
+        if not result:
+            raise Exception("Cập nhật thất bại")
+
+        columns = [col[0] for col in cursor.description]
+        conn.commit()
+        return {**dict(zip(columns, result)), "message": "Dividend record updated successfully"}
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+        conn.close()

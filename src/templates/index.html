@@ -15,6 +15,9 @@
                 <li><a href="/employees">Nhân viên</a></li>
                 <li><a href="/departments">Phòng ban</a></li>
                 <li><a href="/positions">Chức vụ</a></li>
+                <li><a href="/salaries">Lương</a></li>
+                <li><a href="/attendance">Chấm công</a></li>
+                <li><a href="/dividends">Cổ tức</a></li>
             </ul>
         </div>
     </nav>
@@ -52,6 +55,30 @@
                             Quản lý các chức vụ trong công ty. Thêm, sửa, xóa thông tin chức vụ.
                         </p>
                         <a href="/positions" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/salaries'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💰 Quản lý Lương</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý bảng lương nhân viên. Tạo, xem, sửa và thống kê lương theo tháng.
+                        </p>
+                        <a href="/salaries" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/attendance'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">⏰ Quản lý Chấm công</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý chấm công nhân viên. Theo dõi ngày công, nghỉ phép và vắng mặt.
+                        </p>
+                        <a href="/attendance" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/dividends'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💵 Quản lý Cổ tức</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý các đợt chi cổ tức. Thêm, sửa, xóa và xem chi tiết cổ tức.
+                        </p>
+                        <a href="/dividends" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
                 </div>
             </div>

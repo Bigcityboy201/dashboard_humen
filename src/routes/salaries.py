@@ -12,7 +12,17 @@ def list_salaries():
     """
     GET /salaries
     Lấy danh sách các bản ghi lương (Hỗ trợ filter theo EmployeeID, SalaryMonth)
+    Chỉ xử lý khi có query params (API call), còn lại để route HTML xử lý
     """
+    # Kiểm tra nếu là browser request (có Accept: text/html) và không có query params
+    # thì render HTML trực tiếp
+    accept_header = request.headers.get('Accept', '')
+    has_query_params = request.args.get('employee_id') or request.args.get('month')
+    
+    if 'text/html' in accept_header and 'application/json' not in accept_header and not has_query_params:
+        from flask import render_template
+        return render_template('salaries.html'), 200
+    
     try:
         employee_id = request.args.get('employee_id', type=int)
         salary_month = request.args.get('month')

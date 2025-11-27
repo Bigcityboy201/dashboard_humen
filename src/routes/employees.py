@@ -13,17 +13,29 @@ def list_employees():
     API Endpoint: GET /employees
     Lấy danh sách nhân viên có lọc và phân trang.
     """
+    # Kiểm tra nếu là browser request (có Accept: text/html) thì render HTML trực tiếp
+    # Bất kể có query params hay không (query params sẽ được xử lý bởi JavaScript)
+    accept_header = request.headers.get('Accept', '')
+    
+    if 'text/html' in accept_header and 'application/json' not in accept_header:
+        from flask import render_template
+        return render_template('employees.html'), 200
+    
     try:
         # Lấy tham số query
         department_id = request.args.get('department_id', type=int)
+        position_id = request.args.get('position_id', type=int)
         status = request.args.get('status', type=str)
+        keyword = request.args.get('keyword', type=str)
         page = request.args.get('page', default=1, type=int)
         size = request.args.get('size', default=10, type=int)
         
         # Gọi Service để lấy dữ liệu
         result = get_all_employees(
-            department_id=department_id, 
-            status=status, 
+            department_id=department_id,
+            position_id=position_id,
+            status=status,
+            keyword=keyword,
             page=page, 
             size=size
         )
@@ -183,3 +195,5 @@ def update_employee(employee_id):
             details={"error": str(e)},
             trace_id=getattr(g, 'trace_id', None)
         )), 500
+        
+#thiếu xóa mềm

@@ -34,6 +34,9 @@ async function loadPositions() {
                     <td>${pos.PositionName || '-'}</td>
                     <td>
                         <div class="action-buttons">
+                            <button class="action-btn action-btn-view" onclick="viewPositionEmployees(${pos.PositionID})" title="Xem nhân viên">
+                                👥
+                            </button>
                             <button class="action-btn action-btn-edit" onclick="editPosition(${pos.PositionID})" title="Sửa">
                                 ✏️
                             </button>
@@ -149,4 +152,10 @@ document.getElementById('positionModal').addEventListener('click', function(e) {
         closePositionModal();
     }
 });
+
+// View employees by position
+function viewPositionEmployees(positionId) {
+    // Redirect to employees page with position filter
+    window.location.href = `/employees?position_id=${positionId}`;
+}
 

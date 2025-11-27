@@ -34,6 +34,9 @@ async function loadDepartments() {
                     <td>${dept.DepartmentName || '-'}</td>
                     <td>
                         <div class="action-buttons">
+                            <button class="action-btn action-btn-view" onclick="viewDepartmentEmployees(${dept.DepartmentID})" title="Xem nhân viên">
+                                👥
+                            </button>
                             <button class="action-btn action-btn-edit" onclick="editDepartment(${dept.DepartmentID})" title="Sửa">
                                 ✏️
                             </button>
@@ -149,4 +152,10 @@ document.getElementById('departmentModal').addEventListener('click', function(e)
         closeDepartmentModal();
     }
 });
+
+// View employees by department
+function viewDepartmentEmployees(departmentId) {
+    // Redirect to employees page with department filter
+    window.location.href = `/employees?department_id=${departmentId}`;
+}
 

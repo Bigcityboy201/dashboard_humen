@@ -15,6 +15,9 @@
                 <li><a href="/employees" class="active">Nhân viên</a></li>
                 <li><a href="/departments">Phòng ban</a></li>
                 <li><a href="/positions">Chức vụ</a></li>
+                <li><a href="/salaries">Lương</a></li>
+                <li><a href="/attendance">Chấm công</a></li>
+                <li><a href="/dividends">Cổ tức</a></li>
             </ul>
         </div>
     </nav>
@@ -29,8 +32,18 @@
             <!-- Filters -->
             <div class="filters">
                 <div class="filter-group">
+                    <label class="form-label">🔍 Tìm kiếm</label>
+                    <input type="text" id="filter-keyword" class="form-control" placeholder="Tên, email, số điện thoại..." onkeyup="handleKeywordSearch(event)">
+                </div>
+                <div class="filter-group">
                     <label class="form-label">Phòng ban</label>
                     <select id="filter-department" class="form-control" onchange="loadEmployees()">
+                        <option value="">Tất cả</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="form-label">Chức vụ</label>
+                    <select id="filter-position" class="form-control" onchange="loadEmployees()">
                         <option value="">Tất cả</option>
                     </select>
                 </div>

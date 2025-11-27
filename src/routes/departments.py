@@ -1,11 +1,18 @@
 from flask import Blueprint, request, jsonify, g
 from services.department_service import get_departments, get_department_by_id, create_department, update_department, delete_department
+from services.employee_service import get_employees_by_department
 from utils.response import wrap_success, wrap_error
 
 departments_bp = Blueprint('departments', __name__)
 
 @departments_bp.route('/departments', methods=['GET'])
 def list_departments():
+    # Kiểm tra nếu là browser request (có Accept: text/html) thì render HTML trực tiếp
+    accept_header = request.headers.get('Accept', '')
+    if 'text/html' in accept_header and 'application/json' not in accept_header:
+        from flask import render_template
+        return render_template('departments.html'), 200
+    
     try:
         result = get_departments()
         return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
@@ -134,3 +141,29 @@ def remove_department(department_id):
                 trace_id=getattr(g, 'trace_id', None)
             )
         ), 500
+
+
+@departments_bp.route('/departments/<int:department_id>/employees', methods=['GET'])
+def get_department_employees(department_id):
+    """
+    API Endpoint: GET /departments/{department_id}/employees
+    Lấy danh sách nhân viên thuộc phòng ban cụ thể.
+    """
+    try:
+        # Lấy tham số query cho pagination
+        page = request.args.get('page', default=1, type=int)
+        size = request.args.get('size', default=10, type=int)
+        
+        # Gọi service để lấy danh sách nhân viên theo department
+        result = get_employees_by_department(department_id, page=page, size=size)
+        
+        return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
+        
+    except Exception as e:
+        return jsonify(wrap_error(
+            code='INTERNAL_SERVER',
+            message='Lỗi khi lấy danh sách nhân viên theo phòng ban.',
+            domain='departments',
+            details={"error": str(e)},
+            trace_id=getattr(g, 'trace_id', None)
+        )), 500

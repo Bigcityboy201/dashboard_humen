@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Lương</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="salaries-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Trang chủ</a></li>
+                <li><a href="/employees">Nhân viên</a></li>
+                <li><a href="/departments">Phòng ban</a></li>
+                <li><a href="/positions">Chức vụ</a></li>
+                <li><a href="/salaries" class="active">Lương</a></li>
+                <li><a href="/attendance">Chấm công</a></li>
+                <li><a href="/dividends">Cổ tức</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">💰 Quản lý Lương</h1>
+                <button class="btn btn-primary" onclick="openGenerateSalaryModal()">+ Tạo bảng lương</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="form-label">Nhân viên</label>
+                    <select id="filter-employee" class="form-control" onchange="loadSalaries()">
+                        <option value="">Tất cả</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="form-label">Tháng</label>
+                    <input type="month" id="filter-month" class="form-control" onchange="loadSalaries()">
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-secondary" onclick="resetFilters()">Xóa bộ lọc</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nhân viên</th>
+                            <th>Tháng</th>
+                            <th>Lương cơ bản</th>
+                            <th>Thưởng</th>
+                            <th>Khấu trừ</th>
+                            <th>Tổng lương</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salaries-table-body">
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">📊 Thống kê lương</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="form-label">Tháng thống kê</label>
+                    <input type="month" id="stats-month" class="form-control" onchange="loadStatistics()">
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-primary" onclick="loadStatistics()">Xem thống kê</button>
+                </div>
+            </div>
+            <div id="statistics-content" style="margin-top: 1.5rem;">
+                <p style="color: var(--text-secondary); text-align: center;">Chọn tháng để xem thống kê</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Salary Modal -->
+    <div id="generateSalaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Tạo bảng lương</h2>
+                <button class="modal-close" onclick="closeGenerateSalaryModal()">&times;</button>
+            </div>
+            <form id="generateSalaryForm" onsubmit="generateSalary(event)">
+                <div class="form-group">
+                    <label class="form-label">Nhân viên *</label>
+                    <select id="generate-employee-id" class="form-control" required>
+                        <option value="">Chọn nhân viên</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tháng *</label>
+                    <input type="month" id="generate-month" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeGenerateSalaryModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo lương</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Salary Modal -->
+    <div id="editSalaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Chỉnh sửa lương</h2>
+                <button class="modal-close" onclick="closeEditSalaryModal()">&times;</button>
+            </div>
+            <form id="editSalaryForm" onsubmit="saveSalary(event)">
+                <input type="hidden" id="salary-id">
+                <div class="form-group">
+                    <label class="form-label">Thưởng (VND)</label>
+                    <input type="number" id="bonus" class="form-control" min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Khấu trừ (VND)</label>
+                    <input type="number" id="deduction" class="form-control" min="0" step="1000">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditSalaryModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Salary Detail Modal -->
+    <div id="salaryDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Chi tiết lương</h2>
+                <button class="modal-close" onclick="closeSalaryDetailModal()">&times;</button>
+            </div>
+            <div id="salary-detail-content" style="padding: 1.5rem;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Đang tải thông tin...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeSalaryDetailModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/salaries.js') }}"></script>
+</body>
+</html>
+

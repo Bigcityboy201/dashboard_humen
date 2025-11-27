@@ -89,7 +89,7 @@ JOIN (
 	return result
 
 
-def get_all_employees(department_id=None, status=None, page=1, size=10):
+def get_all_employees(department_id=None, position_id=None, status=None, keyword=None, page=1, size=10):
 	vendor = get_db_vendor()
 	placeholder = _placeholder(vendor)
 
@@ -116,9 +116,26 @@ WHERE 1 = 1
 		filters.append(f"e.DepartmentID = {placeholder}")
 		params.append(department_id)
 
+	if position_id is not None:
+		filters.append(f"e.PositionID = {placeholder}")
+		params.append(position_id)
+
 	if status:
 		filters.append(f"e.Status = {placeholder}")
 		params.append(status)
+
+	# Search theo keyword (tìm trong FullName, Email, PhoneNumber)
+	if keyword:
+		if vendor == "mysql":
+			# MySQL sử dụng LIKE với %s
+			filters.append(f"(e.FullName LIKE {placeholder} OR e.Email LIKE {placeholder} OR e.PhoneNumber LIKE {placeholder})")
+			keyword_pattern = f"%{keyword}%"
+			params.extend([keyword_pattern, keyword_pattern, keyword_pattern])
+		else:
+			# SQL Server sử dụng LIKE với ?
+			filters.append(f"(e.FullName LIKE {placeholder} OR e.Email LIKE {placeholder} OR e.PhoneNumber LIKE {placeholder})")
+			keyword_pattern = f"%{keyword}%"
+			params.extend([keyword_pattern, keyword_pattern, keyword_pattern])
 
 	if filters:
 		base_query += " AND " + " AND ".join(filters)
@@ -168,6 +185,20 @@ WHERE 1 = 1
 		"size": size,
 		"employees": employees
 	}
+
+
+def get_employees_by_department(department_id: int, page=1, size=10) -> Dict[str, Any]:
+	"""
+	Lấy danh sách nhân viên theo department_id
+	"""
+	return get_all_employees(department_id=department_id, page=page, size=size)
+
+
+def get_employees_by_position(position_id: int, page=1, size=10) -> Dict[str, Any]:
+	"""
+	Lấy danh sách nhân viên theo position_id
+	"""
+	return get_all_employees(position_id=position_id, page=page, size=size)
  
 def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
     vendors = ["sqlserver", "mysql"]
@@ -225,19 +256,6 @@ def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
         """
         cursor_mysql.execute(insert_mysql, (employee_id, full_name, dept_id, pos_id, status))
 
-        # --- MYSQL INSERT SALARY ---
-        salary = float(data.get("Salary", 0))
-        salary_date = datetime.date.today().replace(day=1)
-        bonus = 0.0
-        deductions = 0.0
-        net_salary = salary + bonus - deductions
-
-        insert_salary = f"""
-        INSERT INTO salaries (EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary)
-        VALUES ({placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql},{placeholder_mysql})
-        """
-        cursor_mysql.execute(insert_salary, (employee_id, salary_date, salary, bonus, deductions, net_salary))
-
         # Commit cả 2 DB
         connections["sqlserver"].commit()
         connections["mysql"].commit()
@@ -248,14 +266,7 @@ def create_employee_transaction(data: Dict[str, Any]) -> Dict[str, Any]:
             "DepartmentID": dept_id,
             "PositionID": pos_id,
             "Status": status,
-            "HireDate": hire_date.strftime("%Y-%m-%d"),
-            "Salary": {
-                "BasicSalary": salary,
-                "Bonus": bonus,
-                "Deduction": deductions,
-                "SalaryDate": salary_date.strftime("%Y-%m-%d"),
-                "TotalSalary": net_salary
-            }
+            "HireDate": hire_date.strftime("%Y-%m-%d")
         }
 
     except Exception as e:

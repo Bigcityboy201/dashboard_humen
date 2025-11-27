@@ -46,12 +46,30 @@ const EmployeesAPI = {
     getAll: async (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.department_id) queryParams.append('department_id', params.department_id);
+        if (params.position_id) queryParams.append('position_id', params.position_id);
         if (params.status) queryParams.append('status', params.status);
+        if (params.keyword) queryParams.append('keyword', params.keyword);
         if (params.page) queryParams.append('page', params.page);
         if (params.size) queryParams.append('size', params.size);
 
         const queryString = queryParams.toString();
         return await apiCall(`/employees${queryString ? '?' + queryString : ''}`);
+    },
+
+    getByDepartment: async (departmentId, params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.size) queryParams.append('size', params.size);
+        const queryString = queryParams.toString();
+        return await apiCall(`/departments/${departmentId}/employees${queryString ? '?' + queryString : ''}`);
+    },
+
+    getByPosition: async (positionId, params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.size) queryParams.append('size', params.size);
+        const queryString = queryParams.toString();
+        return await apiCall(`/positions/${positionId}/employees${queryString ? '?' + queryString : ''}`);
     },
 
     getById: async (id) => {
@@ -114,6 +132,96 @@ const PositionsAPI = {
 
     delete: async (id) => {
         return await apiCall(`/positions/${id}`, 'DELETE');
+    }
+};
+
+// Salaries API
+const SalariesAPI = {
+    getAll: async (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.employee_id) queryParams.append('employee_id', params.employee_id);
+        if (params.month) queryParams.append('month', params.month);
+        const queryString = queryParams.toString();
+        return await apiCall(`/salaries${queryString ? '?' + queryString : ''}`);
+    },
+
+    getById: async (id) => {
+        return await apiCall(`/salaries/${id}`);
+    },
+
+    generate: async (data) => {
+        return await apiCall('/salaries/generate', 'POST', data);
+    },
+
+    update: async (id, data) => {
+        return await apiCall(`/salaries/${id}`, 'PUT', data);
+    },
+
+    delete: async (id) => {
+        return await apiCall(`/salaries/${id}`, 'DELETE');
+    },
+
+    getMySalaries: async (employeeId) => {
+        return await apiCall(`/salaries/my?employee_id=${employeeId}`);
+    },
+
+    getStatistics: async (month) => {
+        return await apiCall(`/salaries/statistics?month=${month}`);
+    }
+};
+
+// Attendance API
+const AttendanceAPI = {
+    getAll: async (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.employee_id) queryParams.append('employee_id', params.employee_id);
+        if (params.month) queryParams.append('month', params.month);
+        const queryString = queryParams.toString();
+        return await apiCall(`/attendance${queryString ? '?' + queryString : ''}`);
+    },
+
+    getById: async (id) => {
+        return await apiCall(`/attendance/${id}`);
+    },
+
+    create: async (data) => {
+        return await apiCall('/attendance', 'POST', data);
+    },
+
+    update: async (id, data) => {
+        return await apiCall(`/attendance/${id}`, 'PUT', data);
+    },
+
+    delete: async (id) => {
+        return await apiCall(`/attendance/${id}`, 'DELETE');
+    },
+
+    getStatistics: async (month) => {
+        const queryParams = month ? `?month=${month}` : '';
+        return await apiCall(`/attendance/statistics${queryParams}`);
+    }
+};
+
+// Dividends API
+const DividendsAPI = {
+    getAll: async () => {
+        return await apiCall('/dividends');
+    },
+
+    getById: async (id) => {
+        return await apiCall(`/dividends/${id}`);
+    },
+
+    create: async (data) => {
+        return await apiCall('/dividends', 'POST', data);
+    },
+
+    update: async (id, data) => {
+        return await apiCall(`/dividends/${id}`, 'PUT', data);
+    },
+
+    delete: async (id) => {
+        return await apiCall(`/dividends/${id}`, 'DELETE');
     }
 };
 

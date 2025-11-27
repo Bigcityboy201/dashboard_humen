@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Cổ tức</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="dividends-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Trang chủ</a></li>
+                <li><a href="/employees">Nhân viên</a></li>
+                <li><a href="/departments">Phòng ban</a></li>
+                <li><a href="/positions">Chức vụ</a></li>
+                <li><a href="/salaries">Lương</a></li>
+                <li><a href="/attendance">Chấm công</a></li>
+                <li><a href="/dividends" class="active">Cổ tức</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">💵 Quản lý Cổ tức</h1>
+                <button class="btn btn-primary" onclick="openDividendModal()">+ Thêm cổ tức</button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ngày chi</th>
+                            <th>Số tiền (VND)</th>
+                            <th>Mô tả</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dividends-table-body">
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dividend Modal -->
+    <div id="dividendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Thêm cổ tức</h2>
+                <button class="modal-close" onclick="closeDividendModal()">&times;</button>
+            </div>
+            <form id="dividendForm" onsubmit="saveDividend(event)">
+                <input type="hidden" id="dividend-id">
+                <div class="form-group">
+                    <label class="form-label">Ngày chi *</label>
+                    <input type="date" id="dividend-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Số tiền (VND) *</label>
+                    <input type="number" id="amount" class="form-control" min="0" step="1000" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mô tả</label>
+                    <textarea id="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDividendModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dividend Detail Modal -->
+    <div id="dividendDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Chi tiết cổ tức</h2>
+                <button class="modal-close" onclick="closeDividendDetailModal()">&times;</button>
+            </div>
+            <div id="dividend-detail-content" style="padding: 1.5rem;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Đang tải thông tin...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDividendDetailModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dividends.js') }}"></script>
+</body>
+</html>
+
