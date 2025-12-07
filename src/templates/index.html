@@ -11,13 +11,7 @@
         <div class="navbar-container">
             <a href="/" class="navbar-brand">🏢 HR Management System</a>
             <ul class="navbar-nav">
-                <li><a href="/" class="active">Trang chủ</a></li>
-                <li><a href="/employees">Nhân viên</a></li>
-                <li><a href="/departments">Phòng ban</a></li>
-                <li><a href="/positions">Chức vụ</a></li>
-                <li><a href="/salaries">Lương</a></li>
-                <li><a href="/attendance">Chấm công</a></li>
-                <li><a href="/dividends">Cổ tức</a></li>
+                <!-- Menu sẽ được tự động tạo bởi navbar.js dựa trên role -->
             </ul>
         </div>
     </nav>
@@ -32,8 +26,9 @@
                     Hệ thống quản lý nhân viên toàn diện với đầy đủ các chức năng CRUD cho nhân viên, phòng ban và chức vụ.
                 </p>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/employees'">
+                <div id="management-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                    <!-- HR Management Cards (HR_MANAGER và ADMIN) -->
+                    <div class="card hr-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/employees'">
                         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">👥 Quản lý Nhân viên</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                             Xem, thêm, sửa, xóa thông tin nhân viên. Quản lý lương và thông tin cá nhân.
@@ -41,7 +36,7 @@
                         <a href="/employees" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
 
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/departments'">
+                    <div class="card hr-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/departments'">
                         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">🏢 Quản lý Phòng ban</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                             Quản lý các phòng ban trong công ty. Thêm, sửa, xóa thông tin phòng ban.
@@ -49,7 +44,7 @@
                         <a href="/departments" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
 
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/positions'">
+                    <div class="card hr-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/positions'">
                         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💼 Quản lý Chức vụ</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                             Quản lý các chức vụ trong công ty. Thêm, sửa, xóa thông tin chức vụ.
@@ -57,15 +52,7 @@
                         <a href="/positions" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
 
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/salaries'">
-                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💰 Quản lý Lương</h2>
-                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                            Quản lý bảng lương nhân viên. Tạo, xem, sửa và thống kê lương theo tháng.
-                        </p>
-                        <a href="/salaries" class="btn btn-primary">Xem chi tiết →</a>
-                    </div>
-
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/attendance'">
+                    <div class="card hr-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/attendance'">
                         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">⏰ Quản lý Chấm công</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                             Quản lý chấm công nhân viên. Theo dõi ngày công, nghỉ phép và vắng mặt.
@@ -73,18 +60,36 @@
                         <a href="/attendance" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
 
-                    <div class="card" style="cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/dividends'">
+                    <!-- Payment Management Cards (PAYROLL_MANAGER và ADMIN) -->
+                    <div class="card payment-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/salaries'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💰 Quản lý Lương</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý bảng lương nhân viên. Tạo, xem, sửa và thống kê lương theo tháng.
+                        </p>
+                        <a href="/salaries" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
+
+                    <div class="card payment-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/dividends'">
                         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">💵 Quản lý Cổ tức</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                             Quản lý các đợt chi cổ tức. Thêm, sửa, xóa và xem chi tiết cổ tức.
                         </p>
                         <a href="/dividends" class="btn btn-primary">Xem chi tiết →</a>
                     </div>
+
+                    <!-- Admin Management Cards (ADMIN only) -->
+                    <div class="card admin-only" style="cursor: pointer; transition: transform 0.2s; display: none;" onclick="window.location.href='/users'">
+                        <h2 style="color: var(--primary-color); margin-bottom: 1rem;">👤 Quản lý Người dùng</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Quản lý tài khoản người dùng trong hệ thống. Thêm, sửa, xóa và phân quyền cho người dùng.
+                        </p>
+                        <a href="/users" class="btn btn-primary">Xem chi tiết →</a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="stats-card">
             <h2 style="margin-bottom: 1rem;">📊 Thống kê nhanh</h2>
             <div id="stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
@@ -103,10 +108,51 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}?v={{ cache_bust }}"></script>
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script>
-        // Load thống kê
+        // Hiển thị/ẩn cards dựa trên role
+        function showCardsByRole() {
+            const roles = AuthManager.getUserRoles();
+            const isAdmin = AuthManager.hasRole('ADMIN');
+            const isHR = AuthManager.hasAnyRole('ADMIN', 'HR_MANAGER');
+            const isPayment = AuthManager.hasAnyRole('ADMIN', 'PAYROLL_MANAGER');
+
+            // Hiển thị HR cards (Nhân viên, Phòng ban, Chức vụ, Chấm công)
+            if (isHR) {
+                document.querySelectorAll('.hr-only').forEach(card => {
+                    card.style.display = 'block';
+                });
+            }
+
+            // Hiển thị Payment cards (Lương, Cổ tức)
+            if (isPayment) {
+                document.querySelectorAll('.payment-only').forEach(card => {
+                    card.style.display = 'block';
+                });
+            }
+
+            // Hiển thị Admin cards (Người dùng)
+            if (isAdmin) {
+                document.querySelectorAll('.admin-only').forEach(card => {
+                    card.style.display = 'block';
+                });
+            }
+        }
+
+        // Load thống kê (chỉ load nếu có quyền HR hoặc ADMIN)
         async function loadStats() {
+            const isHR = AuthManager.hasAnyRole('ADMIN', 'HR_MANAGER');
+            if (!isHR) {
+                // Ẩn phần thống kê nếu không phải HR
+                const statsCard = document.getElementById('stats-card');
+                if (statsCard) {
+                    statsCard.style.display = 'none';
+                }
+                return;
+            }
+
             try {
                 const [employeesRes, departmentsRes, positionsRes] = await Promise.all([
                     EmployeesAPI.getAll({ size: 1 }),
@@ -128,6 +174,8 @@
             }
         }
 
+        // Khởi tạo
+        showCardsByRole();
         loadStats();
     </script>
 </body>

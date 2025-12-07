@@ -12,11 +12,21 @@ async function loadDepartments() {
     tableBody.innerHTML = '';
 
     const result = await DepartmentsAPI.getAll();
+    
+    console.log('Departments API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const departments = result.data || [];
+        // Xử lý trường hợp response bị wrap thêm một lần
+        let data = result.data;
+        if (data && data.data && Array.isArray(data.data)) {
+            data = data.data;
+        } else if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+            data = data.data;
+        }
+        
+        const departments = Array.isArray(data) ? data : [];
 
         if (departments.length === 0) {
             tableBody.innerHTML = `

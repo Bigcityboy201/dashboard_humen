@@ -93,12 +93,24 @@ async function loadEmployees(page = 1) {
     if (keyword) params.keyword = keyword;
 
     const result = await EmployeesAPI.getAll(params);
+    
+    console.log('Employees API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const employees = result.data.employees || [];
-        const totalRecords = result.data.total_records || 0;
+        // Kiểm tra cấu trúc data
+        console.log('Result data:', result.data); // Debug
+        
+        // result.data có thể là object hoặc đã được wrap
+        let data = result.data;
+        if (data && data.data) {
+            // Nếu bị wrap thêm một lần
+            data = data.data;
+        }
+        
+        const employees = data?.employees || data || [];
+        const totalRecords = data?.total_records || 0;
         const totalPages = Math.ceil(totalRecords / pageSize);
 
         if (employees.length === 0) {
@@ -117,8 +129,8 @@ async function loadEmployees(page = 1) {
                     <td>${emp.FullName || '-'}</td>
                     <td>${emp.Email || '-'}</td>
                     <td>${emp.PhoneNumber || '-'}</td>
-                    <td>${emp.DepartmentName || '-'}</td>
-                    <td>${emp.PositionName || '-'}</td>
+                    <td>${emp.DepartmentName || 'Trống'}</td>
+                    <td>${emp.PositionName || 'Trống'}</td>
                     <td>
                         <span class="status-badge ${getStatusClass(emp.Status)}">
                             ${emp.Status || '-'}

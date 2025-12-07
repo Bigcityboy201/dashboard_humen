@@ -12,11 +12,21 @@ async function loadDividends() {
     tableBody.innerHTML = '';
 
     const result = await DividendsAPI.getAll();
+    
+    console.log('Dividends API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const dividends = result.data || [];
+        // Xử lý trường hợp response bị wrap thêm một lần
+        let data = result.data;
+        if (data && data.data && Array.isArray(data.data)) {
+            data = data.data;
+        } else if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+            data = data.data;
+        }
+        
+        const dividends = Array.isArray(data) ? data : [];
 
         if (dividends.length === 0) {
             tableBody.innerHTML = `
@@ -28,12 +38,18 @@ async function loadDividends() {
                 </tr>
             `;
         } else {
-            tableBody.innerHTML = dividends.map(div => `
+            tableBody.innerHTML = dividends.map(div => {
+                // Map field names: DividendAmount -> Amount, DividendDate -> Date
+                const amount = div.Amount || div.DividendAmount || 0;
+                const date = div.DividendDate || div.Date;
+                const description = div.Description || '-';
+                
+                return `
                 <tr>
                     <td>${div.DividendID}</td>
-                    <td>${formatDate(div.DividendDate || div.Date) || '-'}</td>
-                    <td><strong>${formatCurrency(div.Amount)}</strong></td>
-                    <td>${div.Description || '-'}</td>
+                    <td>${formatDate(date) || '-'}</td>
+                    <td><strong>${formatCurrency(amount)}</strong></td>
+                    <td>${description}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="action-btn action-btn-view" onclick="viewDividend(${div.DividendID})" title="Xem chi tiết">
@@ -48,7 +64,8 @@ async function loadDividends() {
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
     } else {
         tableBody.innerHTML = `
@@ -94,9 +111,13 @@ async function loadDividendData(dividendId) {
     const result = await DividendsAPI.getById(dividendId);
     if (result.success) {
         const div = result.data;
+        // Map field names: DividendAmount -> Amount
+        const amount = div.Amount || div.DividendAmount || 0;
+        const date = div.DividendDate || div.Date || '';
+        
         document.getElementById('dividend-id').value = div.DividendID;
-        document.getElementById('dividend-date').value = div.DividendDate || div.Date || '';
-        document.getElementById('amount').value = div.Amount || 0;
+        document.getElementById('dividend-date').value = date;
+        document.getElementById('amount').value = amount;
         document.getElementById('description').value = div.Description || '';
     } else {
         showAlert(result.error || 'Không thể tải thông tin cổ tức', 'error');
@@ -119,6 +140,10 @@ async function viewDividend(dividendId) {
     const result = await DividendsAPI.getById(dividendId);
     if (result.success) {
         const div = result.data;
+        // Map field names: DividendAmount -> Amount
+        const amount = div.Amount || div.DividendAmount || 0;
+        const date = div.DividendDate || div.Date;
+        const description = div.Description;
         
         content.innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -130,24 +155,30 @@ async function viewDividend(dividendId) {
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <strong>Ngày chi:</strong>
-                        <div style="color: var(--text-secondary);">${formatDate(div.DividendDate || div.Date) || '-'}</div>
+                        <div style="color: var(--text-secondary);">${formatDate(date) || '-'}</div>
                     </div>
+                    ${div.EmployeeID ? `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>ID Nhân viên:</strong>
+                        <div style="color: var(--text-secondary);">${div.EmployeeID}</div>
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <div>
                     <h3 style="margin-bottom: 1rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">Thông tin tài chính</h3>
                     <div style="margin-bottom: 1rem;">
                         <strong>Số tiền:</strong>
-                        <div style="color: var(--primary-color); font-size: 1.5rem; font-weight: bold;">${formatCurrency(div.Amount)}</div>
+                        <div style="color: var(--primary-color); font-size: 1.5rem; font-weight: bold;">${formatCurrency(amount)}</div>
                     </div>
                 </div>
             </div>
             
-            ${div.Description ? `
+            ${description ? `
             <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-color);">
                 <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Mô tả</h3>
                 <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem; color: var(--text-secondary);">
-                    ${div.Description}
+                    ${description}
                 </div>
             </div>
             ` : ''}
@@ -179,30 +210,44 @@ async function saveDividend(event) {
     const dividendId = document.getElementById('dividend-id').value;
     const isEdit = !!dividendId;
 
+    const dividendDate = document.getElementById('dividend-date').value;
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const description = document.getElementById('description').value.trim() || null;
+
+    // Map to API expected format (backend expects DividendAmount, DividendDate)
     const data = {
-        DividendDate: document.getElementById('dividend-date').value,
-        Amount: parseFloat(document.getElementById('amount').value) || 0,
-        Description: document.getElementById('description').value || null
+        DividendDate: dividendDate,
+        DividendAmount: amount
     };
-
-    // Map to API expected format
-    if (!isEdit || !data.DividendDate) {
-        data.Date = data.DividendDate;
+    
+    // Thêm Description nếu có (nếu backend hỗ trợ)
+    if (description) {
+        data.Description = description;
     }
 
-    let result;
-    if (isEdit) {
-        result = await DividendsAPI.update(dividendId, data);
-    } else {
-        result = await DividendsAPI.create(data);
-    }
+    console.log('Save dividend data:', data); // Debug
 
-    if (result.success) {
-        showAlert(isEdit ? 'Cập nhật cổ tức thành công!' : 'Thêm cổ tức thành công!', 'success');
-        closeDividendModal();
-        loadDividends();
-    } else {
-        showAlert(result.error || 'Có lỗi xảy ra', 'error');
+    try {
+        let result;
+        if (isEdit) {
+            result = await DividendsAPI.update(dividendId, data);
+        } else {
+            result = await DividendsAPI.create(data);
+        }
+
+        console.log('Save dividend result:', result); // Debug
+
+        if (result.success) {
+            showAlert(isEdit ? 'Cập nhật cổ tức thành công!' : 'Thêm cổ tức thành công!', 'success');
+            closeDividendModal();
+            loadDividends();
+        } else {
+            showAlert(result.error || 'Có lỗi xảy ra', 'error');
+            console.error('Save dividend error:', result); // Debug
+        }
+    } catch (error) {
+        console.error('Save dividend exception:', error); // Debug
+        showAlert(error.message || 'Có lỗi xảy ra khi lưu cổ tức', 'error');
     }
 }
 

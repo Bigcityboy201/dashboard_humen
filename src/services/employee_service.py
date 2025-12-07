@@ -101,11 +101,11 @@ SELECT
 	e.Email,
 	e.PhoneNumber,
   	e.HireDate,
-	d.DepartmentName,
-	p.PositionName
+	COALESCE(d.DepartmentName, '') AS DepartmentName,
+	COALESCE(p.PositionName, '') AS PositionName
 FROM employees e
-JOIN departments d ON e.DepartmentID = d.DepartmentID
-JOIN positions p ON e.PositionID = p.PositionID
+LEFT JOIN departments d ON e.DepartmentID = d.DepartmentID
+LEFT JOIN positions p ON e.PositionID = p.PositionID
 WHERE 1 = 1
 """
 

@@ -53,27 +53,42 @@ def execute_db(sql_query: str, params: Tuple[Any, ...], vendor: str) -> int:
         if conn:
             conn.close()
 
-def get_salaries(employee_id: Optional[int] = None, salary_month: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_salaries(employee_id: Optional[int] = None, salary_month: Optional[str] = None, year: Optional[int] = None) -> List[Dict[str, Any]]:
     """Lấy danh sách bản ghi lương với filter"""
     vendor = get_salary_db_vendor()
     placeholder = _placeholder(vendor)
     
-    query = """
-    SELECT SalaryID, EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary, CreatedAt
-    FROM salaries 
+    # Join với employees để lấy tên nhân viên
+    query = f"""
+    SELECT 
+        s.SalaryID, 
+        s.EmployeeID, 
+        s.SalaryMonth, 
+        s.BaseSalary AS BasicSalary,
+        s.Bonus, 
+        s.Deductions AS Deduction,
+        s.NetSalary AS TotalSalary,
+        s.CreatedAt,
+        e.FullName AS EmployeeName
+    FROM salaries s
+    LEFT JOIN employees e ON s.EmployeeID = e.EmployeeID
     WHERE 1=1
     """
     params = []
     
     if employee_id:
-        query += f" AND EmployeeID = {placeholder}"
+        query += f" AND s.EmployeeID = {placeholder}"
         params.append(employee_id)
         
     if salary_month:
-        query += f" AND SalaryMonth = {placeholder}"
+        query += f" AND s.SalaryMonth = {placeholder}"
         params.append(salary_month)
+    elif year:
+        # Filter theo năm: SalaryMonth LIKE 'YYYY-%'
+        query += f" AND s.SalaryMonth LIKE {placeholder}"
+        params.append(f"{year}-%")
         
-    query += " ORDER BY SalaryMonth DESC, EmployeeID"
+    query += " ORDER BY s.SalaryMonth DESC, s.EmployeeID"
     
     return fetch_data_from_db(query, tuple(params), vendor)
 
@@ -118,10 +133,21 @@ def get_salary_by_id(salary_id: int) -> Optional[Dict[str, Any]]:
     vendor = get_salary_db_vendor()
     placeholder = _placeholder(vendor)
     
+    # Join với employees để lấy tên nhân viên
     query = f"""
-    SELECT SalaryID, EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary, CreatedAt
-    FROM salaries 
-    WHERE SalaryID = {placeholder}
+    SELECT 
+        s.SalaryID, 
+        s.EmployeeID, 
+        s.SalaryMonth, 
+        s.BaseSalary AS BasicSalary,
+        s.Bonus, 
+        s.Deductions AS Deduction,
+        s.NetSalary AS TotalSalary,
+        s.CreatedAt,
+        e.FullName AS EmployeeName
+    FROM salaries s
+    LEFT JOIN employees e ON s.EmployeeID = e.EmployeeID
+    WHERE s.SalaryID = {placeholder}
     """
     
     result = fetch_data_from_db(query, (salary_id,), vendor)
@@ -145,9 +171,13 @@ def update_salary(salary_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         raise Exception("Không tìm thấy bản ghi lương")
     
     # Tính toán NetSalary mới
-    base_salary = current_salary["BaseSalary"]
-    new_bonus = bonus if bonus is not None else current_salary["Bonus"]
-    new_deductions = deductions if deductions is not None else current_salary["Deductions"]
+    # Map field names: BasicSalary -> BaseSalary, Deduction -> Deductions
+    base_salary = current_salary.get("BaseSalary") or current_salary.get("BasicSalary", 0)
+    current_bonus = current_salary.get("Bonus", 0)
+    current_deductions = current_salary.get("Deductions") or current_salary.get("Deduction", 0)
+    
+    new_bonus = bonus if bonus is not None else current_bonus
+    new_deductions = deductions if deductions is not None else current_deductions
     new_net_salary = base_salary + new_bonus - new_deductions
     
     query = f"""
@@ -196,28 +226,59 @@ def get_my_salaries(employee_id: int) -> List[Dict[str, Any]]:
     
     return fetch_data_from_db(query, (employee_id,), vendor)
 
-def get_salary_statistics(salary_month: str) -> Dict[str, Any]:
-    """Thống kê tổng chi phí lương theo tháng"""
+def get_salary_statistics(salary_month: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
+    """Thống kê tổng chi phí lương theo tháng hoặc năm"""
     vendor = get_salary_db_vendor()
     placeholder = _placeholder(vendor)
     
-    query = f"""
-    SELECT 
-        SUM(BaseSalary) as total_BaseSalary,
-        SUM(Bonus) as total_Bonus,
-        SUM(Deductions) as total_Deductions,
-        SUM(NetSalary) as total_NetSalary
-    FROM salaries 
-    WHERE SalaryMonth = {placeholder}
-    """
+    if salary_month:
+        # Thống kê theo tháng cụ thể
+        query = f"""
+        SELECT 
+            COUNT(*) as total_records,
+            SUM(BaseSalary) as total_base_salary,
+            SUM(Bonus) as total_bonus,
+            SUM(Deductions) as total_deductions,
+            SUM(NetSalary) as total_amount
+        FROM salaries 
+        WHERE SalaryMonth = {placeholder}
+        """
+        params = (salary_month,)
+    elif year:
+        # Thống kê theo năm
+        query = f"""
+        SELECT 
+            COUNT(*) as total_records,
+            SUM(BaseSalary) as total_base_salary,
+            SUM(Bonus) as total_bonus,
+            SUM(Deductions) as total_deductions,
+            SUM(NetSalary) as total_amount
+        FROM salaries 
+        WHERE SalaryMonth LIKE {placeholder}
+        """
+        params = (f"{year}-%",)
+    else:
+        # Thống kê tổng quát
+        query = """
+        SELECT 
+            COUNT(*) as total_records,
+            SUM(BaseSalary) as total_base_salary,
+            SUM(Bonus) as total_bonus,
+            SUM(Deductions) as total_deductions,
+            SUM(NetSalary) as total_amount
+        FROM salaries
+        """
+        params = ()
     
-    result = fetch_data_from_db(query, (salary_month,), vendor)
+    result = fetch_data_from_db(query, params, vendor)
     stats = result[0] if result else {}
     
     return {
-        "SalaryMonth": salary_month,
-        "total_BaseSalary": float(stats.get("total_BaseSalary", 0)),
-        "total_Bonus": float(stats.get("total_Bonus", 0)),
-        "total_Deductions": float(stats.get("total_Deductions", 0)),
-        "total_NetSalary": float(stats.get("total_NetSalary", 0))
+        "year": year,
+        "month": salary_month,
+        "total_records": int(stats.get("total_records", 0)),
+        "total_base_salary": float(stats.get("total_base_salary", 0) or 0),
+        "total_bonus": float(stats.get("total_bonus", 0) or 0),
+        "total_deductions": float(stats.get("total_deductions", 0) or 0),
+        "total_amount": float(stats.get("total_amount", 0) or 0)
     }

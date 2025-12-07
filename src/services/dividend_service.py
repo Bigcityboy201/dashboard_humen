@@ -113,10 +113,18 @@ def update_dividend_record(dividend_id: int, data: Dict[str, Any]) -> Dict[str, 
         if not existing:
             raise Exception("Không tìm thấy bản ghi cổ tức")
 
-        # Dữ liệu mới
-        employee_id = data.get("EmployeeID", existing["EmployeeID"])
-        dividend_amount = data.get("DividendAmount", existing["DividendAmount"])
-        dividend_date = data.get("DividendDate", existing["DividendDate"])
+        # Chỉ cập nhật các field được gửi lên, giữ nguyên các field khác
+        employee_id = data.get("EmployeeID")
+        if employee_id is None:
+            employee_id = existing.get("EmployeeID")
+        
+        dividend_amount = data.get("DividendAmount")
+        if dividend_amount is None:
+            dividend_amount = existing.get("DividendAmount")
+        
+        dividend_date = data.get("DividendDate")
+        if dividend_date is None:
+            dividend_date = existing.get("DividendDate")
 
         query = f"""
         UPDATE dividends

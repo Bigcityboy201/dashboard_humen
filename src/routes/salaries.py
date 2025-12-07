@@ -17,7 +17,7 @@ def list_salaries():
     # Kiểm tra nếu là browser request (có Accept: text/html) và không có query params
     # thì render HTML trực tiếp
     accept_header = request.headers.get('Accept', '')
-    has_query_params = request.args.get('employee_id') or request.args.get('month')
+    has_query_params = request.args.get('employee_id') or request.args.get('year')
     
     if 'text/html' in accept_header and 'application/json' not in accept_header and not has_query_params:
         from flask import render_template
@@ -25,9 +25,9 @@ def list_salaries():
     
     try:
         employee_id = request.args.get('employee_id', type=int)
-        salary_month = request.args.get('month')
+        year = request.args.get('year', type=int)
         
-        result = get_salaries(employee_id, salary_month)
+        result = get_salaries(employee_id, year=year)
         return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
     except Exception as e:
         return jsonify(wrap_error(
@@ -157,17 +157,17 @@ def get_salary_stats():
     Thống kê tổng chi phí lương theo tháng
     """
     try:
-        salary_month = request.args.get('month')
-        if not salary_month:
+        year = request.args.get('year', type=int)
+        if not year:
             return jsonify(wrap_error(
                 code='BAD_REQUEST',
-                message='Thiếu tham số month.',
+                message='Thiếu tham số year.',
                 domain='salaries',
                 details={},
                 trace_id=getattr(g, 'trace_id', None)
             )), 400
             
-        result = get_salary_statistics(salary_month)
+        result = get_salary_statistics(year=year)
         return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
     except Exception as e:
         return jsonify(wrap_error(

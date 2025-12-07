@@ -11,13 +11,7 @@
         <div class="navbar-container">
             <a href="/" class="navbar-brand">🏢 HR Management System</a>
             <ul class="navbar-nav">
-                <li><a href="/">Trang chủ</a></li>
-                <li><a href="/employees">Nhân viên</a></li>
-                <li><a href="/departments">Phòng ban</a></li>
-                <li><a href="/positions">Chức vụ</a></li>
-                <li><a href="/salaries">Lương</a></li>
-                <li><a href="/attendance" class="active">Chấm công</a></li>
-                <li><a href="/dividends">Cổ tức</a></li>
+                <!-- Menu sẽ được tự động tạo bởi navbar.js dựa trên role -->
             </ul>
         </div>
     </nav>
@@ -38,8 +32,8 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="form-label">Tháng</label>
-                    <input type="month" id="filter-month" class="form-control" onchange="loadAttendances()">
+                    <label class="form-label">Năm</label>
+                    <input type="number" id="filter-year" class="form-control" min="2000" max="2100" placeholder="YYYY" onchange="loadAttendances()">
                 </div>
                 <div class="filter-group" style="display: flex; align-items: flex-end;">
                     <button class="btn btn-secondary" onclick="resetFilters()">Xóa bộ lọc</button>
@@ -84,15 +78,15 @@
             <h2 style="margin-bottom: 1rem;">📊 Thống kê chấm công</h2>
             <div class="filters">
                 <div class="filter-group">
-                    <label class="form-label">Tháng thống kê</label>
-                    <input type="month" id="stats-month" class="form-control" onchange="loadStatistics()">
+                    <label class="form-label">Năm thống kê</label>
+                    <input type="number" id="stats-year" class="form-control" min="2000" max="2100" placeholder="YYYY" onchange="loadStatistics()">
                 </div>
                 <div class="filter-group" style="display: flex; align-items: flex-end;">
                     <button class="btn btn-primary" onclick="loadStatistics()">Xem thống kê</button>
                 </div>
             </div>
             <div id="statistics-content" style="margin-top: 1.5rem;">
-                <p style="color: var(--text-secondary); text-align: center;">Chọn tháng để xem thống kê</p>
+                <p style="color: var(--text-secondary); text-align: center;">Chọn năm để xem thống kê</p>
             </div>
         </div>
     </div>
@@ -159,7 +153,19 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}?v={{ cache_bust }}"></script>
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script>
+        // Kiểm tra quyền truy cập trang attendance
+        // Chỉ HR_MANAGER và ADMIN mới được truy cập
+        (function() {
+            if (!AuthManager.hasAnyRole('ADMIN', 'HR_MANAGER')) {
+                alert('Bạn không có quyền truy cập trang này. Chỉ HR và Admin mới có thể xem chấm công.');
+                window.location.href = '/';
+            }
+        })();
+    </script>
     <script src="{{ url_for('static', filename='js/attendance.js') }}"></script>
 </body>
 </html>

@@ -12,11 +12,21 @@ async function loadPositions() {
     tableBody.innerHTML = '';
 
     const result = await PositionsAPI.getAll();
+    
+    console.log('Positions API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const positions = result.data || [];
+        // Xử lý trường hợp response bị wrap thêm một lần
+        let data = result.data;
+        if (data && data.data && Array.isArray(data.data)) {
+            data = data.data;
+        } else if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+            data = data.data;
+        }
+        
+        const positions = Array.isArray(data) ? data : [];
 
         if (positions.length === 0) {
             tableBody.innerHTML = `

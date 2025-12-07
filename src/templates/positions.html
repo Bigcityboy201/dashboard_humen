@@ -11,13 +11,7 @@
         <div class="navbar-container">
             <a href="/" class="navbar-brand">🏢 HR Management System</a>
             <ul class="navbar-nav">
-                <li><a href="/">Trang chủ</a></li>
-                <li><a href="/employees">Nhân viên</a></li>
-                <li><a href="/departments">Phòng ban</a></li>
-                <li><a href="/positions" class="active">Chức vụ</a></li>
-                <li><a href="/salaries">Lương</a></li>
-                <li><a href="/attendance">Chấm công</a></li>
-                <li><a href="/dividends">Cổ tức</a></li>
+                <!-- Menu sẽ được tự động tạo bởi navbar.js dựa trên role -->
             </ul>
         </div>
     </nav>
@@ -81,6 +75,8 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}?v={{ cache_bust }}"></script>
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/positions.js') }}"></script>
 </body>

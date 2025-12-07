@@ -1,47 +1,94 @@
-// API Base URL
-const API_BASE_URL = '';
+// API Base URL - Sử dụng Java backend
+const JAVA_BASE_URL = 'http://localhost:8080';
 
-// Helper function để gọi API
-async function apiCall(endpoint, method = 'GET', data = null) {
-    const options = {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    };
-
-    if (data && (method === 'POST' || method === 'PUT')) {
-        options.body = JSON.stringify(data);
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-        const result = await response.json();
-
-        if (result.operationType === 'Success') {
-            return {
-                success: true,
-                data: result.data,
-                traceId: result.traceId
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message || 'Có lỗi xảy ra',
-                code: result.code,
-                details: result.details,
-                traceId: result.traceId
-            };
-        }
-    } catch (error) {
-        return {
-            success: false,
-            error: error.message || 'Lỗi kết nối đến server'
-        };
-    }
+// Helper function để gọi API Python qua Java proxy (sử dụng apiCallWithAuth từ auth.js)
+async function apiCallPython(endpoint, method = 'GET', data = null) {
+    // Tất cả API Python đều đi qua Java proxy với prefix /api/python
+    const proxyEndpoint = `/api/python${endpoint}`;
+    return await apiCallWithAuth(proxyEndpoint, method, data);
 }
 
-// Employees API
+// Helper function để gọi API Java trực tiếp (sử dụng apiCallWithAuth từ auth.js)
+async function apiCallJava(endpoint, method = 'GET', data = null) {
+    return await apiCallWithAuth(endpoint, method, data);
+}
+
+// ========== JAVA API - User Management (ADMIN only) ==========
+const UsersAPI = {
+    // Lấy danh sách users với pagination
+    getAll: async (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page !== undefined) queryParams.append('page', params.page);
+        if (params.size !== undefined) queryParams.append('size', params.size);
+        
+        const queryString = queryParams.toString();
+        const endpoint = `/users${queryString ? '?' + queryString : ''}`;
+        return await apiCallJava(endpoint, 'GET');
+    },
+
+    // Tạo user mới
+    create: async (data) => {
+        // data: { fullName, email, phone, userName, password, address, dateOfBirth, roles: [roleIds] }
+        return await apiCallJava('/users', 'POST', data);
+    },
+
+    // Cập nhật user (Admin update)
+    update: async (id, data) => {
+        // data: { fullName?, email?, phone?, address?, dateOfBirth?, active?, roleIds? }
+        return await apiCallJava(`/users/${id}`, 'PUT', data);
+    },
+
+    // Cập nhật trạng thái active/inactive
+    updateStatus: async (id, isActive) => {
+        return await apiCallJava(`/users/${id}/status`, 'PUT', { active: isActive });
+    },
+
+    // Xóa user
+    delete: async (id) => {
+        return await apiCallJava(`/users/${id}`, 'DELETE');
+    },
+
+    // Reset password
+    resetPassword: async (id, newPassword) => {
+        return await apiCallJava(`/users/${id}/reset-password`, 'PUT', { password: newPassword });
+    }
+};
+
+// ========== JAVA API - Profile Management (ADMIN, HR_MANAGER) ==========
+const ProfileAPI = {
+    // Lấy profile hiện tại
+    getProfile: async () => {
+        return await apiCallJava('/profile', 'GET');
+    },
+
+    // Cập nhật profile hiện tại
+    updateProfile: async (data) => {
+        // data: { fullName?, email?, phone?, address?, dateOfBirth? }
+        return await apiCallJava('/profile', 'PUT', data);
+    },
+
+    // Đổi mật khẩu
+    changePassword: async (data) => {
+        // data: { oldPassword, newPassword }
+        return await apiCallJava('/profile/change-password', 'PUT', data);
+    }
+};
+
+// ========== JAVA API - Role Management ==========
+const RolesAPI = {
+    // Lấy danh sách tất cả roles
+    getAll: async () => {
+        return await apiCallJava('/api/roles', 'GET');
+    },
+
+    // Tạo role mới
+    create: async (data) => {
+        // data: { name, description? }
+        return await apiCallJava('/api/roles', 'POST', data);
+    }
+};
+
+// ========== PYTHON API - Employees (HR_MANAGER hoặc ADMIN) ==========
 const EmployeesAPI = {
     getAll: async (params = {}) => {
         const queryParams = new URLSearchParams();
@@ -53,7 +100,7 @@ const EmployeesAPI = {
         if (params.size) queryParams.append('size', params.size);
 
         const queryString = queryParams.toString();
-        return await apiCall(`/employees${queryString ? '?' + queryString : ''}`);
+        return await apiCallPython(`/employees${queryString ? '?' + queryString : ''}`);
     },
 
     getByDepartment: async (departmentId, params = {}) => {
@@ -61,7 +108,7 @@ const EmployeesAPI = {
         if (params.page) queryParams.append('page', params.page);
         if (params.size) queryParams.append('size', params.size);
         const queryString = queryParams.toString();
-        return await apiCall(`/departments/${departmentId}/employees${queryString ? '?' + queryString : ''}`);
+        return await apiCallPython(`/departments/${departmentId}/employees${queryString ? '?' + queryString : ''}`);
     },
 
     getByPosition: async (positionId, params = {}) => {
@@ -69,163 +116,222 @@ const EmployeesAPI = {
         if (params.page) queryParams.append('page', params.page);
         if (params.size) queryParams.append('size', params.size);
         const queryString = queryParams.toString();
-        return await apiCall(`/positions/${positionId}/employees${queryString ? '?' + queryString : ''}`);
+        return await apiCallPython(`/positions/${positionId}/employees${queryString ? '?' + queryString : ''}`);
     },
 
     getById: async (id) => {
-        return await apiCall(`/employees/${id}`);
+        return await apiCallPython(`/employees/${id}`);
     },
 
     create: async (data) => {
-        return await apiCall('/employees', 'POST', data);
+        return await apiCallPython('/employees', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/employees/${id}`, 'PUT', data);
+        return await apiCallPython(`/employees/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/employees/${id}`, 'DELETE');
+        return await apiCallPython(`/employees/${id}`, 'DELETE');
     }
 };
 
-// Departments API
+// ========== PYTHON API - Departments (HR_MANAGER hoặc ADMIN) ==========
 const DepartmentsAPI = {
     getAll: async () => {
-        return await apiCall('/departments');
+        return await apiCallPython('/departments');
     },
 
     getById: async (id) => {
-        return await apiCall(`/departments/${id}`);
+        return await apiCallPython(`/departments/${id}`);
     },
 
     create: async (data) => {
-        return await apiCall('/departments', 'POST', data);
+        return await apiCallPython('/departments', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/departments/${id}`, 'PUT', data);
+        return await apiCallPython(`/departments/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/departments/${id}`, 'DELETE');
+        return await apiCallPython(`/departments/${id}`, 'DELETE');
+    },
+
+    // Lấy danh sách nhân viên trong phòng ban
+    getEmployees: async (id, params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.size) queryParams.append('size', params.size);
+        const queryString = queryParams.toString();
+        return await apiCallPython(`/departments/${id}/employees${queryString ? '?' + queryString : ''}`);
     }
 };
 
-// Positions API
+// ========== PYTHON API - Positions (HR_MANAGER hoặc ADMIN) ==========
 const PositionsAPI = {
     getAll: async () => {
-        return await apiCall('/positions');
+        return await apiCallPython('/positions');
     },
 
     getById: async (id) => {
-        return await apiCall(`/positions/${id}`);
+        return await apiCallPython(`/positions/${id}`);
     },
 
     create: async (data) => {
-        return await apiCall('/positions', 'POST', data);
+        return await apiCallPython('/positions', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/positions/${id}`, 'PUT', data);
+        return await apiCallPython(`/positions/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/positions/${id}`, 'DELETE');
+        return await apiCallPython(`/positions/${id}`, 'DELETE');
+    },
+
+    // Lấy danh sách nhân viên có chức vụ này
+    getEmployees: async (id, params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.size) queryParams.append('size', params.size);
+        const queryString = queryParams.toString();
+        return await apiCallPython(`/positions/${id}/employees${queryString ? '?' + queryString : ''}`);
     }
 };
 
-// Salaries API
+// ========== PYTHON API - Salaries (PAYROLL_MANAGER hoặc ADMIN) ==========
 const SalariesAPI = {
     getAll: async (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.employee_id) queryParams.append('employee_id', params.employee_id);
-        if (params.month) queryParams.append('month', params.month);
+        if (params.year) queryParams.append('year', params.year);
         const queryString = queryParams.toString();
-        return await apiCall(`/salaries${queryString ? '?' + queryString : ''}`);
+        return await apiCallPython(`/salaries${queryString ? '?' + queryString : ''}`);
     },
 
     getById: async (id) => {
-        return await apiCall(`/salaries/${id}`);
+        return await apiCallPython(`/salaries/${id}`);
     },
 
     generate: async (data) => {
-        return await apiCall('/salaries/generate', 'POST', data);
+        return await apiCallPython('/salaries/generate', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/salaries/${id}`, 'PUT', data);
+        return await apiCallPython(`/salaries/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/salaries/${id}`, 'DELETE');
+        return await apiCallPython(`/salaries/${id}`, 'DELETE');
     },
 
     getMySalaries: async (employeeId) => {
-        return await apiCall(`/salaries/my?employee_id=${employeeId}`);
+        return await apiCallPython(`/salaries/my?employee_id=${employeeId}`);
     },
 
-    getStatistics: async (month) => {
-        return await apiCall(`/salaries/statistics?month=${month}`);
+    getStatistics: async (month, year) => {
+        const queryParams = new URLSearchParams();
+        if (month) queryParams.append('month', month);
+        if (year) queryParams.append('year', year);
+        const queryString = queryParams.toString();
+        return await apiCallPython(`/salaries/statistics${queryString ? '?' + queryString : ''}`);
     }
 };
 
-// Attendance API
+// ========== PYTHON API - Attendance (HR_MANAGER hoặc ADMIN) ==========
 const AttendanceAPI = {
     getAll: async (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.employee_id) queryParams.append('employee_id', params.employee_id);
-        if (params.month) queryParams.append('month', params.month);
+        if (params.year) queryParams.append('year', params.year);
         const queryString = queryParams.toString();
-        return await apiCall(`/attendance${queryString ? '?' + queryString : ''}`);
+        return await apiCallPython(`/attendance${queryString ? '?' + queryString : ''}`);
     },
 
     getById: async (id) => {
-        return await apiCall(`/attendance/${id}`);
+        return await apiCallPython(`/attendance/${id}`);
     },
 
     create: async (data) => {
-        return await apiCall('/attendance', 'POST', data);
+        return await apiCallPython('/attendance', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/attendance/${id}`, 'PUT', data);
+        return await apiCallPython(`/attendance/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/attendance/${id}`, 'DELETE');
+        return await apiCallPython(`/attendance/${id}`, 'DELETE');
     },
 
-    getStatistics: async (month) => {
-        const queryParams = month ? `?month=${month}` : '';
-        return await apiCall(`/attendance/statistics${queryParams}`);
+    getStatistics: async (month, year) => {
+        const queryParams = new URLSearchParams();
+        if (month) queryParams.append('month', month);
+        if (year) queryParams.append('year', year);
+        const queryString = queryParams.toString();
+        return await apiCallPython(`/attendance/statistics${queryString ? '?' + queryString : ''}`);
     }
 };
 
-// Dividends API
+// ========== PYTHON API - Dividends (PAYROLL_MANAGER hoặc ADMIN) ==========
 const DividendsAPI = {
     getAll: async () => {
-        return await apiCall('/dividends');
+        return await apiCallPython('/dividends');
     },
 
     getById: async (id) => {
-        return await apiCall(`/dividends/${id}`);
+        return await apiCallPython(`/dividends/${id}`);
     },
 
     create: async (data) => {
-        return await apiCall('/dividends', 'POST', data);
+        return await apiCallPython('/dividends', 'POST', data);
     },
 
     update: async (id, data) => {
-        return await apiCall(`/dividends/${id}`, 'PUT', data);
+        return await apiCallPython(`/dividends/${id}`, 'PUT', data);
     },
 
     delete: async (id) => {
-        return await apiCall(`/dividends/${id}`, 'DELETE');
+        return await apiCallPython(`/dividends/${id}`, 'DELETE');
     }
 };
 
-// Utility functions
+// ========== PYTHON API - Dashboard ==========
+const DashboardAPI = {
+    // Lấy thống kê tổng hợp cho trang chủ
+    getOverview: async () => {
+        return await apiCallPython('/dashboard/overview');
+    }
+};
+
+// ========== PYTHON API - Search ==========
+const SearchAPI = {
+    // Tìm kiếm toàn hệ thống
+    searchAll: async (keyword) => {
+        return await apiCallPython(`/search?keyword=${encodeURIComponent(keyword)}`);
+    }
+};
+
+// ========== PYTHON API - Reports ==========
+const ReportsAPI = {
+    // Báo cáo lương theo năm
+    getSalaryReport: async (year) => {
+        return await apiCallPython(`/reports/salary?year=${year}`);
+    },
+
+    // Báo cáo chấm công theo năm
+    getAttendanceReport: async (year) => {
+        return await apiCallPython(`/reports/attendance?year=${year}`);
+    },
+
+    // Báo cáo tài chính tổng hợp (lương + cổ tức) theo năm
+    getFinancialReport: async (year) => {
+        return await apiCallPython(`/reports/financial?year=${year}`);
+    }
+};
+
+// ========== Utility functions ==========
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
@@ -235,7 +341,11 @@ function showAlert(message, type = 'info') {
     `;
 
     const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    } else {
+        document.body.insertBefore(alertDiv, document.body.firstChild);
+    }
 
     // Tự động xóa sau 5 giây
     setTimeout(() => {
@@ -256,4 +366,3 @@ function formatCurrency(amount) {
         currency: 'VND'
     }).format(amount);
 }
-

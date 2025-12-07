@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ của tôi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="profile-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <!-- Menu sẽ được tự động tạo bởi navbar.js dựa trên role -->
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">👤 Hồ sơ của tôi</h1>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Profile Info -->
+            <div id="profile-content" style="display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                    <!-- Thông tin cá nhân -->
+                    <div>
+                        <h2 style="margin-bottom: 1.5rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Thông tin cá nhân
+                        </h2>
+                        <form id="profileForm" onsubmit="updateProfile(event)">
+                            <div class="form-group">
+                                <label class="form-label">Họ và tên</label>
+                                <input type="text" id="full-name" class="form-control" maxlength="100">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="email" class="form-control">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Số điện thoại</label>
+                                <input type="tel" id="phone" class="form-control" maxlength="20">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Địa chỉ</label>
+                                <textarea id="address" class="form-control" rows="3" maxlength="200"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Ngày sinh</label>
+                                <input type="date" id="date-of-birth" class="form-control">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Username</label>
+                                <input type="text" id="user-name" class="form-control" disabled style="background-color: var(--bg-color);">
+                                <small class="form-text">Username không thể thay đổi</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Vai trò</label>
+                                <div id="roles-display" style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem; background: var(--bg-color); border-radius: 0.25rem;">
+                                    <!-- Roles sẽ được load động -->
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">💾 Cập nhật thông tin</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Đổi mật khẩu -->
+                    <div>
+                        <h2 style="margin-bottom: 1.5rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Đổi mật khẩu
+                        </h2>
+                        <form id="changePasswordForm" onsubmit="changePassword(event)">
+                            <div class="form-group">
+                                <label class="form-label">Mật khẩu hiện tại *</label>
+                                <input type="password" id="old-password" class="form-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Mật khẩu mới *</label>
+                                <input type="password" id="new-password" class="form-control" required minlength="6" maxlength="50">
+                                <small class="form-text">Mật khẩu phải có ít nhất 6 ký tự, chứa ít nhất 1 chữ hoa và 1 số</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Xác nhận mật khẩu mới *</label>
+                                <input type="password" id="confirm-password" class="form-control" required minlength="6" maxlength="50">
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-warning">🔑 Đổi mật khẩu</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+</body>
+</html>
+
+
+
+
+

@@ -10,7 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadEmployees() {
     const result = await EmployeesAPI.getAll({ size: 1000 });
     if (result.success) {
-        employees = result.data.employees || [];
+        // Xử lý response
+        let data = result.data;
+        if (data && data.data) {
+            data = data.data;
+        }
+        employees = data?.employees || data || [];
         const select = document.getElementById('filter-employee');
         const formSelect = document.getElementById('employee-id');
         
@@ -38,18 +43,28 @@ async function loadAttendances() {
     tableBody.innerHTML = '';
 
     const employeeId = document.getElementById('filter-employee').value;
-    const month = document.getElementById('filter-month').value;
+    const year = document.getElementById('filter-year').value;
 
     const params = {};
     if (employeeId) params.employee_id = parseInt(employeeId);
-    if (month) params.month = month;
+    if (year) params.year = parseInt(year);
 
     const result = await AttendanceAPI.getAll(params);
+    
+    console.log('Attendance API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const attendances = result.data || [];
+        // Xử lý trường hợp response bị wrap thêm một lần
+        let data = result.data;
+        if (data && data.data && Array.isArray(data.data)) {
+            data = data.data;
+        } else if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+            data = data.data;
+        }
+        
+        const attendances = Array.isArray(data) ? data : [];
 
         if (attendances.length === 0) {
             tableBody.innerHTML = `
@@ -102,7 +117,7 @@ async function loadAttendances() {
 // Reset filters
 function resetFilters() {
     document.getElementById('filter-employee').value = '';
-    document.getElementById('filter-month').value = '';
+    document.getElementById('filter-year').value = '';
     loadAttendances();
 }
 
@@ -288,9 +303,9 @@ async function deleteAttendance(attendanceId) {
 
 // Load statistics
 async function loadStatistics() {
-    const month = document.getElementById('stats-month').value;
-    if (!month) {
-        showAlert('Vui lòng chọn tháng', 'error');
+    const year = document.getElementById('stats-year').value;
+    if (!year) {
+        showAlert('Vui lòng chọn năm', 'error');
         return;
     }
 
@@ -302,21 +317,31 @@ async function loadStatistics() {
         </div>
     `;
 
-    const result = await AttendanceAPI.getStatistics(month);
+    const result = await AttendanceAPI.getStatistics(null, year);
+    console.log('Attendance statistics result:', result); // Debug
+    
     if (result.success) {
         const stats = result.data;
+        // Xử lý trường hợp data bị wrap
+        const statsData = stats.data || stats;
+        
         content.innerHTML = `
+            <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Thống kê chấm công năm ${year}</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${stats.total_work_days || 0}</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${statsData.total_records || 0}</div>
+                    <div style="color: var(--text-secondary);">Tổng số bản ghi</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${statsData.total_work_days || 0}</div>
                     <div style="color: var(--text-secondary);">Tổng ngày công</div>
                 </div>
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);">${stats.total_leave_days || 0}</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);">${statsData.total_leave_days || 0}</div>
                     <div style="color: var(--text-secondary);">Tổng ngày nghỉ phép</div>
                 </div>
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--danger-color);">${stats.total_absent_days || 0}</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--danger-color);">${statsData.total_absent_days || 0}</div>
                     <div style="color: var(--text-secondary);">Tổng ngày vắng mặt</div>
                 </div>
             </div>

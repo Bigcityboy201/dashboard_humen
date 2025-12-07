@@ -60,7 +60,7 @@ def get_total_days_in_month(attendance_month: str) -> int:
     except:
         return 30  # Default fallback
 
-def get_attendances(employee_id: Optional[int] = None, attendance_month: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_attendances(employee_id: Optional[int] = None, attendance_month: Optional[str] = None, year: Optional[int] = None) -> List[Dict[str, Any]]:
     """Lấy danh sách bản ghi chấm công với filter"""
     vendor = get_attendance_db_vendor()
     placeholder = _placeholder(vendor)
@@ -109,6 +109,10 @@ def get_attendances(employee_id: Optional[int] = None, attendance_month: Optiona
     if attendance_month:
         query += f" AND a.AttendanceMonth = {placeholder}"
         params.append(attendance_month)
+    elif year:
+        # Filter theo năm: AttendanceMonth LIKE 'YYYY-%'
+        query += f" AND a.AttendanceMonth LIKE {placeholder}"
+        params.append(f"{year}-%")
         
     query += " ORDER BY a.AttendanceMonth DESC, a.EmployeeID"
     
@@ -268,7 +272,7 @@ def delete_attendance(attendance_id: int) -> Dict[str, Any]:
         "message": f"Attendance record with ID {attendance_id} deleted successfully"
     }
 
-def get_attendance_statistics(attendance_month: Optional[str] = None) -> Dict[str, Any]:
+def get_attendance_statistics(attendance_month: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
     """Thống kê tổng số ngày công, vắng mặt theo tháng/quý"""
     vendor = get_attendance_db_vendor()
     placeholder = _placeholder(vendor)
@@ -285,6 +289,18 @@ def get_attendance_statistics(attendance_month: Optional[str] = None) -> Dict[st
         WHERE AttendanceMonth = {placeholder}
         """
         params = (attendance_month,)
+    elif year:
+        # Thống kê theo năm
+        query = f"""
+        SELECT 
+            COUNT(*) as total_records,
+            SUM(WorkDays) as total_work_days,
+            SUM(AbsentDays) as total_absent_days,
+            SUM(LeaveDays) as total_leave_days
+        FROM attendance 
+        WHERE AttendanceMonth LIKE {placeholder}
+        """
+        params = (f"{year}-%",)
     else:
         # Thống kê tổng quát (tất cả các tháng)
         query = """

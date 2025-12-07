@@ -10,7 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadEmployees() {
     const result = await EmployeesAPI.getAll({ size: 1000 });
     if (result.success) {
-        employees = result.data.employees || [];
+        // Xử lý response
+        let data = result.data;
+        if (data && data.data) {
+            data = data.data;
+        }
+        employees = data?.employees || data || [];
         const select = document.getElementById('filter-employee');
         const generateSelect = document.getElementById('generate-employee-id');
         
@@ -38,18 +43,28 @@ async function loadSalaries() {
     tableBody.innerHTML = '';
 
     const employeeId = document.getElementById('filter-employee').value;
-    const month = document.getElementById('filter-month').value;
+    const year = document.getElementById('filter-year').value;
 
     const params = {};
     if (employeeId) params.employee_id = parseInt(employeeId);
-    if (month) params.month = month;
+    if (year) params.year = parseInt(year);
 
     const result = await SalariesAPI.getAll(params);
+    
+    console.log('Salaries API Response:', result); // Debug
 
     loading.style.display = 'none';
 
     if (result.success) {
-        const salaries = result.data || [];
+        // Xử lý trường hợp response bị wrap thêm một lần
+        let data = result.data;
+        if (data && data.data && Array.isArray(data.data)) {
+            data = data.data;
+        } else if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+            data = data.data;
+        }
+        
+        const salaries = Array.isArray(data) ? data : [];
 
         if (salaries.length === 0) {
             tableBody.innerHTML = `
@@ -102,7 +117,7 @@ async function loadSalaries() {
 // Reset filters
 function resetFilters() {
     document.getElementById('filter-employee').value = '';
-    document.getElementById('filter-month').value = '';
+    document.getElementById('filter-year').value = '';
     loadSalaries();
 }
 
@@ -222,11 +237,17 @@ function closeSalaryDetailModal() {
 // Edit salary
 async function editSalary(salaryId) {
     const result = await SalariesAPI.getById(salaryId);
+    console.log('Get salary by ID result:', result); // Debug
+    
     if (result.success) {
         const salary = result.data;
-        document.getElementById('salary-id').value = salary.SalaryID;
-        document.getElementById('bonus').value = salary.Bonus || 0;
-        document.getElementById('deduction').value = salary.Deduction || 0;
+        // Xử lý trường hợp data bị wrap
+        const salaryData = salary.data || salary;
+        
+        document.getElementById('salary-id').value = salaryData.SalaryID;
+        document.getElementById('bonus').value = salaryData.Bonus || 0;
+        // Map field names: Deduction -> Deductions
+        document.getElementById('deduction').value = salaryData.Deduction || salaryData.Deductions || 0;
         
         const modal = document.getElementById('editSalaryModal');
         modal.classList.add('show');
@@ -247,19 +268,30 @@ async function saveSalary(event) {
 
     const salaryId = document.getElementById('salary-id').value;
 
+    // Map field names: Deduction -> Deductions (backend expects Deductions)
     const data = {
         Bonus: parseFloat(document.getElementById('bonus').value) || 0,
-        Deduction: parseFloat(document.getElementById('deduction').value) || 0
+        Deductions: parseFloat(document.getElementById('deduction').value) || 0
     };
 
-    const result = await SalariesAPI.update(salaryId, data);
+    console.log('Update salary data:', data); // Debug
 
-    if (result.success) {
-        showAlert('Cập nhật lương thành công!', 'success');
-        closeEditSalaryModal();
-        loadSalaries();
-    } else {
-        showAlert(result.error || 'Có lỗi xảy ra', 'error');
+    try {
+        const result = await SalariesAPI.update(salaryId, data);
+        
+        console.log('Update salary result:', result); // Debug
+
+        if (result.success) {
+            showAlert('Cập nhật lương thành công!', 'success');
+            closeEditSalaryModal();
+            loadSalaries();
+        } else {
+            showAlert(result.error || 'Có lỗi xảy ra', 'error');
+            console.error('Update salary error:', result); // Debug
+        }
+    } catch (error) {
+        console.error('Update salary exception:', error); // Debug
+        showAlert(error.message || 'Có lỗi xảy ra khi cập nhật lương', 'error');
     }
 }
 
@@ -280,9 +312,9 @@ async function deleteSalary(salaryId) {
 
 // Load statistics
 async function loadStatistics() {
-    const month = document.getElementById('stats-month').value;
-    if (!month) {
-        showAlert('Vui lòng chọn tháng', 'error');
+    const year = document.getElementById('stats-year').value;
+    if (!year) {
+        showAlert('Vui lòng chọn năm', 'error');
         return;
     }
 
@@ -294,18 +326,36 @@ async function loadStatistics() {
         </div>
     `;
 
-    const result = await SalariesAPI.getStatistics(month);
+    const result = await SalariesAPI.getStatistics(null, year);
+    console.log('Statistics result:', result); // Debug
+    
     if (result.success) {
         const stats = result.data;
+        // Xử lý trường hợp data bị wrap
+        const statsData = stats.data || stats;
+        
         content.innerHTML = `
+            <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Thống kê lương năm ${year}</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${stats.total_records || 0}</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${statsData.total_records || 0}</div>
                     <div style="color: var(--text-secondary);">Tổng số bản ghi</div>
                 </div>
                 <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);">${formatCurrency(stats.total_amount || 0)}</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);">${formatCurrency(statsData.total_amount || statsData.total_NetSalary || 0)}</div>
                     <div style="color: var(--text-secondary);">Tổng chi phí lương</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">${formatCurrency(statsData.total_base_salary || statsData.total_BaseSalary || 0)}</div>
+                    <div style="color: var(--text-secondary);">Tổng lương cơ bản</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--warning-color);">${formatCurrency(statsData.total_bonus || 0)}</div>
+                    <div style="color: var(--text-secondary);">Tổng thưởng</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--danger-color);">${formatCurrency(statsData.total_deductions || statsData.total_Deductions || 0)}</div>
+                    <div style="color: var(--text-secondary);">Tổng khấu trừ</div>
                 </div>
             </div>
         `;

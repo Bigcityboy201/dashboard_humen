@@ -17,6 +17,9 @@ from routes.positions import positions_bp
 from routes.salaries import salaries_bp
 from routes.dividends import dividends_bp
 from routes.attendance import attendance_bp
+from routes.dashboard import dashboard_bp
+from routes.search import search_bp
+from routes.reports import reports_bp
 
 from utils.response import wrap_success, wrap_error
 from clients.java_client import JavaClient
@@ -43,9 +46,16 @@ def create_app():
     app.register_blueprint(salaries_bp)
     app.register_blueprint(dividends_bp)
     app.register_blueprint(attendance_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(search_bp)
+    app.register_blueprint(reports_bp)
 
     # 3. Đăng ký route HTML sau (để ưu tiên render HTML khi truy cập từ browser)
     # Trong Flask, route được match theo thứ tự LIFO (Last In First Out)
+    @app.route('/login')
+    def login_page():
+        return render_template('login.html')
+
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -74,6 +84,14 @@ def create_app():
     def dividends_page():
         return render_template('dividends.html')
 
+    @app.route('/users')
+    def users_page():
+        return render_template('users.html')
+
+    @app.route('/profile')
+    def profile_page():
+        return render_template('profile.html')
+
     # 3. Xử lý lỗi 404
     @app.errorhandler(404)
     def page_not_found(e):
@@ -97,6 +115,10 @@ def create_app():
                 return render_template('attendance.html'), 200
             elif request.path == '/dividends':
                 return render_template('dividends.html'), 200
+            elif request.path == '/users':
+                return render_template('users.html'), 200
+            elif request.path == '/profile':
+                return render_template('profile.html'), 200
         
         # Trả về JSON cho tất cả các trường hợp khác
         return jsonify(
