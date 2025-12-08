@@ -109,6 +109,18 @@
                     <label class="form-label">Tháng *</label>
                     <input type="month" id="generate-month" class="form-control" required>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Lương cơ bản (BaseSalary) *</label>
+                    <input type="number" id="generate-base-salary" class="form-control" min="0" step="1000" required placeholder="Nhập lương cơ bản (VND)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Thưởng (Bonus)</label>
+                    <input type="number" id="generate-bonus" class="form-control" min="0" step="1000" value="0" placeholder="Nhập thưởng (VND)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Khấu trừ (Deductions)</label>
+                    <input type="number" id="generate-deductions" class="form-control" min="0" step="1000" value="0" placeholder="Nhập khấu trừ (VND)">
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeGenerateSalaryModal()">Hủy</button>
                     <button type="submit" class="btn btn-primary">Tạo lương</button>

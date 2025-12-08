@@ -174,3 +174,37 @@ def delete_department(department_id: int) -> int:
         cursor_my.close()
         conn_sqlserver.close()
         conn_mysql.close()
+
+def get_department_statistics() -> List[Dict[str, Any]]:
+    """
+    Lấy thống kê nhân viên theo phòng ban (Báo cáo HR)
+    """
+    vendor = get_db_vendor()
+    
+    try:
+        # Query đếm số nhân viên theo từng phòng ban
+        query = """
+        SELECT 
+            d.DepartmentID,
+            d.DepartmentName,
+            COUNT(e.EmployeeID) AS EmployeeCount
+        FROM departments d
+        LEFT JOIN employees e ON d.DepartmentID = e.DepartmentID
+        GROUP BY d.DepartmentID, d.DepartmentName
+        ORDER BY EmployeeCount DESC, d.DepartmentName
+        """
+        
+        results = fetch_data_from_db(query, (), vendor)
+        
+        # Format kết quả
+        return [
+            {
+                "DepartmentID": row.get("DepartmentID"),
+                "DepartmentName": row.get("DepartmentName"),
+                "EmployeeCount": row.get("EmployeeCount", 0),
+                "Date": None  # Có thể thêm ngày nếu cần
+            }
+            for row in results
+        ]
+    except Exception as e:
+        raise Exception(f"Lỗi khi lấy thống kê phòng ban: {e}")

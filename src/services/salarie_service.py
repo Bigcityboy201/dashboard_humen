@@ -244,19 +244,103 @@ def get_salary_statistics(salary_month: Optional[str] = None, year: Optional[int
         WHERE SalaryMonth = {placeholder}
         """
         params = (salary_month,)
+        result = fetch_data_from_db(query, params, vendor)
+        stats = result[0] if result else {}
+        
+        return {
+            "year": year,
+            "month": salary_month,
+            "total_records": int(stats.get("total_records", 0)),
+            "total_base_salary": float(stats.get("total_base_salary", 0) or 0),
+            "total_bonus": float(stats.get("total_bonus", 0) or 0),
+            "total_deductions": float(stats.get("total_deductions", 0) or 0),
+            "total_amount": float(stats.get("total_amount", 0) or 0)
+        }
     elif year:
-        # Thống kê theo năm
-        query = f"""
+        # Thống kê theo năm - trả về dữ liệu theo tháng cho dashboard
+        monthly_query = f"""
+        SELECT 
+            SalaryMonth as month,
+            COUNT(*) as employee_count,
+            SUM(BaseSalary) as total_base_salary,
+            SUM(Bonus) as total_bonus,
+            SUM(Deductions) as total_deductions,
+            SUM(NetSalary) as total_net_salary,
+            SUM(BaseSalary + Bonus) as total_gross_salary
+        FROM salaries 
+        WHERE SalaryMonth LIKE {placeholder}
+        GROUP BY SalaryMonth
+        ORDER BY SalaryMonth
+        """
+        monthly_params = (f"{year}-%",)
+        
+        try:
+            monthly_data = fetch_data_from_db(monthly_query, monthly_params, vendor)
+        except Exception as e:
+            print(f"Error fetching monthly salary data: {e}")
+            monthly_data = []
+        
+        # Tính tổng hợp cả năm
+        total_query = f"""
         SELECT 
             COUNT(*) as total_records,
             SUM(BaseSalary) as total_base_salary,
             SUM(Bonus) as total_bonus,
             SUM(Deductions) as total_deductions,
-            SUM(NetSalary) as total_amount
+            SUM(NetSalary) as total_amount,
+            SUM(BaseSalary + Bonus) as total_gross_salary
         FROM salaries 
         WHERE SalaryMonth LIKE {placeholder}
         """
-        params = (f"{year}-%",)
+        try:
+            total_result = fetch_data_from_db(total_query, monthly_params, vendor)
+            total_stats = total_result[0] if total_result else {}
+        except Exception as e:
+            print(f"Error fetching total salary stats: {e}")
+            total_stats = {}
+        
+        # Format monthly_data để phù hợp với dashboard
+        formatted_monthly_data = []
+        for month_row in monthly_data:
+            base_salary = float(month_row.get("total_base_salary", 0) or 0)
+            bonus = float(month_row.get("total_bonus", 0) or 0)
+            # Tính total_gross_salary = BaseSalary + Bonus (nếu SQL không tính được thì tính lại)
+            total_gross = month_row.get("total_gross_salary")
+            if total_gross is None:
+                total_gross = base_salary + bonus
+            else:
+                total_gross = float(total_gross or 0)
+            
+            formatted_monthly_data.append({
+                "month": month_row.get("month", ""),
+                "employee_count": int(month_row.get("employee_count", 0)),
+                "total_gross_salary": total_gross,
+                "total_net_salary": float(month_row.get("total_net_salary", 0) or 0),
+                "total_base_salary": base_salary,
+                "total_bonus": bonus,
+                "total_deductions": float(month_row.get("total_deductions", 0) or 0)
+            })
+        
+        # Tính total_gross_salary từ total_stats (nếu SQL không tính được thì tính lại)
+        total_base = float(total_stats.get("total_base_salary", 0) or 0)
+        total_bonus = float(total_stats.get("total_bonus", 0) or 0)
+        total_gross_from_stats = total_stats.get("total_gross_salary")
+        if total_gross_from_stats is None:
+            total_gross_salary = total_base + total_bonus
+        else:
+            total_gross_salary = float(total_gross_from_stats or 0)
+        
+        return {
+            "year": year,
+            "month": None,
+            "monthly_data": formatted_monthly_data,
+            "total_records": int(total_stats.get("total_records", 0)),
+            "total_base_salary": total_base,
+            "total_bonus": total_bonus,
+            "total_deductions": float(total_stats.get("total_deductions", 0) or 0),
+            "total_amount": float(total_stats.get("total_amount", 0) or 0),
+            "total_gross_salary": total_gross_salary
+        }
     else:
         # Thống kê tổng quát
         query = """
@@ -269,16 +353,15 @@ def get_salary_statistics(salary_month: Optional[str] = None, year: Optional[int
         FROM salaries
         """
         params = ()
-    
-    result = fetch_data_from_db(query, params, vendor)
-    stats = result[0] if result else {}
-    
-    return {
-        "year": year,
-        "month": salary_month,
-        "total_records": int(stats.get("total_records", 0)),
-        "total_base_salary": float(stats.get("total_base_salary", 0) or 0),
-        "total_bonus": float(stats.get("total_bonus", 0) or 0),
-        "total_deductions": float(stats.get("total_deductions", 0) or 0),
-        "total_amount": float(stats.get("total_amount", 0) or 0)
-    }
+        result = fetch_data_from_db(query, params, vendor)
+        stats = result[0] if result else {}
+        
+        return {
+            "year": year,
+            "month": salary_month,
+            "total_records": int(stats.get("total_records", 0)),
+            "total_base_salary": float(stats.get("total_base_salary", 0) or 0),
+            "total_bonus": float(stats.get("total_bonus", 0) or 0),
+            "total_deductions": float(stats.get("total_deductions", 0) or 0),
+            "total_amount": float(stats.get("total_amount", 0) or 0)
+        }

@@ -167,3 +167,22 @@ def get_department_employees(department_id):
             details={"error": str(e)},
             trace_id=getattr(g, 'trace_id', None)
         )), 500
+
+@departments_bp.route('/departments/statistics', methods=['GET'])
+def get_department_statistics():
+    """
+    API Endpoint: GET /departments/statistics
+    Lấy thống kê nhân viên theo phòng ban (Báo cáo HR)
+    """
+    try:
+        from services.department_service import get_department_statistics
+        result = get_department_statistics()
+        return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
+    except Exception as e:
+        return jsonify(wrap_error(
+            code='INTERNAL_SERVER',
+            message='Lỗi khi lấy thống kê phòng ban.',
+            domain='departments',
+            details={"error": str(e)},
+            trace_id=getattr(g, 'trace_id', None)
+        )), 500

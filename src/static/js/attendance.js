@@ -79,7 +79,7 @@ async function loadAttendances() {
             tableBody.innerHTML = attendances.map(att => `
                 <tr>
                     <td>${att.AttendanceID || att.TimesheetID}</td>
-                    <td>${att.EmployeeName || att.Employee?.FullName || '-'}</td>
+                    <td>${att.FullName || att.EmployeeName || att.Employee?.FullName || '-'}</td>
                     <td>${formatDate(att.AttendanceMonth || att.Month) || '-'}</td>
                     <td>${att.WorkDays || att.WorkingDays || 0}</td>
                     <td>${att.LeaveDays || 0}</td>
@@ -154,7 +154,17 @@ async function loadAttendanceData(attendanceId) {
         const att = result.data;
         document.getElementById('attendance-id').value = att.AttendanceID || att.TimesheetID;
         document.getElementById('employee-id').value = att.EmployeeID || '';
-        document.getElementById('attendance-month').value = att.AttendanceMonth || att.Month || '';
+        
+        // Normalize AttendanceMonth về format YYYY-MM cho input type="month"
+        let attendanceMonth = att.AttendanceMonth || att.Month || '';
+        if (attendanceMonth) {
+            // Nếu có format YYYY-MM-DD, chuyển về YYYY-MM
+            if (attendanceMonth.length >= 7) {
+                attendanceMonth = attendanceMonth.substring(0, 7);
+            }
+        }
+        document.getElementById('attendance-month').value = attendanceMonth;
+        
         document.getElementById('work-days').value = att.WorkDays || att.WorkingDays || 0;
         document.getElementById('leave-days').value = att.LeaveDays || 0;
         document.getElementById('absent-days').value = att.AbsentDays || 0;
@@ -191,7 +201,7 @@ async function viewAttendance(attendanceId) {
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <strong>Tên nhân viên:</strong>
-                        <div style="color: var(--text-secondary); font-size: 1.1rem; font-weight: 500;">${att.EmployeeName || att.Employee?.FullName || '-'}</div>
+                        <div style="color: var(--text-secondary); font-size: 1.1rem; font-weight: 500;">${att.FullName || att.EmployeeName || att.Employee?.FullName || '-'}</div>
                     </div>
                 </div>
                 
@@ -252,23 +262,71 @@ function editAttendance(attendanceId) {
 async function saveAttendance(event) {
     event.preventDefault();
 
+    // Kiểm tra authentication trước
+    if (!AuthManager.isAuthenticated()) {
+        showAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 2000);
+        return;
+    }
+
+    // Kiểm tra quyền
+    if (!AuthManager.hasAnyRole('ADMIN', 'HR_MANAGER')) {
+        showAlert('Bạn không có quyền thêm/chỉnh sửa chấm công. Chỉ HR_MANAGER và ADMIN mới có quyền này.', 'error');
+        return;
+    }
+
     const attendanceId = document.getElementById('attendance-id').value;
     const isEdit = !!attendanceId;
 
+    // Lấy và normalize AttendanceMonth
+    let attendanceMonth = document.getElementById('attendance-month').value;
+    
+    // Input type="month" trả về YYYY-MM, giữ nguyên format này
+    // Python service sẽ normalize thành YYYY-MM-01 nếu cần
+    if (attendanceMonth) {
+        // Đảm bảo format YYYY-MM (input type="month" đã trả về đúng format)
+        // Nếu có format khác, normalize về YYYY-MM
+        if (attendanceMonth.length === 7 && attendanceMonth[4] === '-') {
+            // Đã đúng format YYYY-MM
+        } else if (attendanceMonth.length === 10 && attendanceMonth[4] === '-' && attendanceMonth[7] === '-') {
+            // Format YYYY-MM-DD, chuyển về YYYY-MM
+            attendanceMonth = attendanceMonth.substring(0, 7);
+        } else {
+            showAlert('Tháng chấm công phải có format YYYY-MM (ví dụ: 2024-12)', 'error');
+            return;
+        }
+    }
+
     const data = {
         EmployeeID: parseInt(document.getElementById('employee-id').value),
-        AttendanceMonth: document.getElementById('attendance-month').value,
+        AttendanceMonth: attendanceMonth,
         WorkDays: parseInt(document.getElementById('work-days').value) || 0,
         LeaveDays: parseInt(document.getElementById('leave-days').value) || 0,
         AbsentDays: parseInt(document.getElementById('absent-days').value) || 0,
         Notes: document.getElementById('notes').value || null
     };
 
-    // Map to API expected format
-    if (!isEdit) {
-        data.Month = data.AttendanceMonth;
-        data.WorkingDays = data.WorkDays;
+    // Validate dữ liệu
+    if (!data.EmployeeID || !data.AttendanceMonth) {
+        showAlert('Vui lòng điền đầy đủ thông tin bắt buộc (Nhân viên và Tháng chấm công)', 'error');
+        return;
     }
+
+    // Validate EmployeeID
+    if (isNaN(data.EmployeeID) || data.EmployeeID <= 0) {
+        showAlert('Vui lòng chọn nhân viên hợp lệ', 'error');
+        return;
+    }
+
+    // Validate WorkDays, LeaveDays, AbsentDays
+    if (data.WorkDays < 0 || data.LeaveDays < 0 || data.AbsentDays < 0) {
+        showAlert('Số ngày công, ngày nghỉ phép và ngày vắng mặt phải >= 0', 'error');
+        return;
+    }
+
+    console.log('Saving attendance:', { isEdit, data, token: AuthManager.getToken() ? 'exists' : 'missing' });
 
     let result;
     if (isEdit) {
@@ -282,7 +340,16 @@ async function saveAttendance(event) {
         closeAttendanceModal();
         loadAttendances();
     } else {
-        showAlert(result.error || 'Có lỗi xảy ra', 'error');
+        // Xử lý lỗi authentication
+        if (result.code === 'INVALID' || result.code === 'FORBIDDEN' || result.error?.includes('login')) {
+            showAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+            setTimeout(() => {
+                AuthManager.logout();
+            }, 2000);
+        } else {
+            showAlert(result.error || result.message || 'Có lỗi xảy ra', 'error');
+        }
+        console.error('Attendance save error:', result);
     }
 }
 

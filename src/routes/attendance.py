@@ -46,14 +46,43 @@ def create_attendance_record():
     """
     try:
         data = request.json
+        if not data:
+            return jsonify(wrap_error(
+                code='BAD_REQUEST',
+                message='Thiếu dữ liệu gửi lên.',
+                domain='attendance',
+                details={},
+                trace_id=getattr(g, 'trace_id', None)
+            )), 400
+        
+        # Log để debug
+        print(f"Creating attendance with data: {data}")
+        
         result = create_attendance(data)
         return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 201
     except Exception as e:
+        # Log lỗi chi tiết
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error creating attendance: {str(e)}")
+        print(f"Traceback: {error_trace}")
+        
+        # Trả về error message rõ ràng hơn
+        error_message = str(e)
+        if "Lỗi DB" in error_message:
+            error_message = f"Lỗi kết nối database: {error_message}"
+        elif "Thiếu" in error_message:
+            error_message = error_message
+        elif "đã tồn tại" in error_message.lower() or "duplicate" in error_message.lower():
+            error_message = error_message
+        else:
+            error_message = f"Lỗi khi tạo chấm công: {error_message}"
+        
         return jsonify(wrap_error(
             code='INTERNAL_SERVER',
-            message='Lỗi khi tạo bản ghi chấm công.',
+            message=error_message,
             domain='attendance',
-            details={"error": str(e)},
+            details={"error": str(e), "traceback": error_trace},
             trace_id=getattr(g, 'trace_id', None)
         )), 500
 

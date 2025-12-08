@@ -2,7 +2,6 @@ package truonggg.service.impl;
 
 import java.sql.Date;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.request.User.AdminUpdateUserRequestDTO;
+import truonggg.dto.request.User.ChangePasswordRequestDTO;
 import truonggg.dto.request.User.UpdateProfileRequestDTO;
 import truonggg.dto.request.User.UserRequestDTO;
 import truonggg.dto.request.User.UserUpdate_Active_RequestDTO;
@@ -155,71 +155,43 @@ public class UserServiceIMPL implements UserService {
 		}
 
 		// 3. Cập nhật các field thông tin nếu có giá trị
-		// FullName: cập nhật nếu có giá trị (không null và không rỗng sau khi trim)
 		if (dto.getFullName() != null) {
-			String trimmedFullName = dto.getFullName().trim();
-			if (!trimmedFullName.isEmpty()) {
-				user.setFullName(trimmedFullName);
-			}
+			user.setFullName(dto.getFullName());
 		}
-		// Email: cập nhật nếu có giá trị và hợp lệ
 		if (dto.getEmail() != null) {
-			String trimmedEmail = dto.getEmail().trim();
-			if (!trimmedEmail.isEmpty()) {
-				user.setEmail(trimmedEmail);
-			}
+			user.setEmail(dto.getEmail());
 		}
-		// Phone: cập nhật nếu có giá trị
 		if (dto.getPhone() != null) {
-			String trimmedPhone = dto.getPhone().trim();
-			if (!trimmedPhone.isEmpty()) {
-				user.setPhone(trimmedPhone);
-			}
+			user.setPhone(dto.getPhone());
 		}
-		// Address: cập nhật nếu có giá trị (có thể là empty string để xóa)
 		if (dto.getAddress() != null) {
-			user.setAddress(dto.getAddress().trim());
+			user.setAddress(dto.getAddress());
 		}
 		if (dto.getDateOfBirth() != null) {
-			user.setDateOfBirth(new java.sql.Date(dto.getDateOfBirth().getTime()));
+			user.setDateOfBirth(new Date(dto.getDateOfBirth().getTime()));
 		}
+//		if (dto.getActive() != null) {
+//			user.setActive(dto.getActive());
+//		}
 
 		// 4. Cập nhật roles nếu có roleIds trong DTO
 		if (dto.getRoleIds() != null) {
-			// Xóa tất cả roles cũ
-			// Với orphanRemoval = true, khi clear() và set lại, JPA sẽ tự động xóa các UserRole cũ khỏi database
-			user.getRoles().clear();
+			List<UserRole> currentRoles = user.getRoles();
+			currentRoles.clear(); // Hibernate sẽ xóa các orphan
 
-			// Thêm roles mới
 			if (!dto.getRoleIds().isEmpty()) {
 				List<Role> roles = this.roleRepository.findAllById(dto.getRoleIds());
 				if (roles.size() != dto.getRoleIds().size()) {
 					throw new NotFoundException("role", "Một hoặc nhiều role không tồn tại!");
 				}
 
-				// Tạo ArrayList mới thay vì dùng toList() (immutable)
-				List<UserRole> userRoles = new ArrayList<>();
 				for (Role role : roles) {
-					UserRole userRole = UserRole.builder()
-							.user(user)
-							.role(role)
-							.assignedAt(LocalDateTime.now())
+					UserRole userRole = UserRole.builder().user(user).role(role).assignedAt(LocalDateTime.now())
 							.build();
-					userRoles.add(userRole);
+					currentRoles.add(userRole);
 				}
-
-				user.setRoles(userRoles);
-			} else {
-				// Nếu roleIds rỗng, set empty list
-				user.setRoles(new ArrayList<>());
 			}
 		}
-		System.out.println("Updating user: " + user.getUserName());
-		System.out.println("FullName: " + dto.getFullName());
-		System.out.println("Email: " + dto.getEmail());
-		System.out.println("Phone: " + dto.getPhone());
-		System.out.println("Roles to assign: " + dto.getRoleIds());
-
 		// 5. Lưu và trả về DTO
 		return this.userMapper.toDTO(this.userRepository.save(user));
 	}
@@ -236,26 +208,9 @@ public class UserServiceIMPL implements UserService {
 	}
 
 	@Override
-	public UserResponseDTO changePassword(String username, truonggg.dto.request.User.ChangePasswordRequestDTO dto) {
-		// 1. Tìm user theo username
-		User user = this.userRepository.findByUserName(username)
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found!"));
-
-		// 2. Kiểm tra mật khẩu cũ có đúng không
-		if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
-			throw new org.springframework.security.authentication.BadCredentialsException("Old password is incorrect");
-		}
-
-		// 3. Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ
-		if (passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
-			throw new IllegalArgumentException("New password must be different from old password");
-		}
-
-		// 4. Encode và cập nhật mật khẩu mới
-		user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
-
-		// 5. Lưu và trả về DTO
-		return this.userMapper.toDTO(this.userRepository.save(user));
+	public UserResponseDTO changePassword(String username, ChangePasswordRequestDTO dto) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

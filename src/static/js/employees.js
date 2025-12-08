@@ -137,7 +137,6 @@ async function loadEmployees(page = 1) {
                         </span>
                     </td>
                     <td>${formatDate(emp.HireDate)}</td>
-                    <td>${emp.Salary ? formatCurrency(emp.Salary.TotalSalary) : '-'}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="action-btn action-btn-view" onclick="viewEmployee(${emp.EmployeeID})" title="Xem chi tiết">
@@ -240,18 +239,15 @@ function openEmployeeModal(employeeId = null) {
     const modal = document.getElementById('employeeModal');
     const form = document.getElementById('employeeForm');
     const modalTitle = document.getElementById('modal-title');
-    const salaryGroup = document.getElementById('salary-group');
 
     form.reset();
     document.getElementById('employee-id').value = '';
 
     if (employeeId) {
         modalTitle.textContent = 'Sửa thông tin nhân viên';
-        salaryGroup.style.display = 'none';
         loadEmployeeData(employeeId);
     } else {
         modalTitle.textContent = 'Thêm nhân viên mới';
-        salaryGroup.style.display = 'block';
     }
 
     modal.classList.add('show');
@@ -299,8 +295,12 @@ async function viewEmployee(employeeId) {
     
     const result = await EmployeesAPI.getById(employeeId);
     if (result.success) {
-        const emp = result.data;
-        const statusClass = getStatusClass(emp.Status);
+        const emp = result.data || result; // Xử lý trường hợp data bị wrap
+        const statusClass = getStatusClass(emp.Status || '');
+        
+        // Xử lý an toàn các trường có thể null
+        const departmentName = emp.Department?.DepartmentName || emp.DepartmentName || '-';
+        const positionName = emp.Position?.PositionName || emp.PositionName || '-';
         
         content.innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -308,7 +308,7 @@ async function viewEmployee(employeeId) {
                     <h3 style="margin-bottom: 1rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">Thông tin cá nhân</h3>
                     <div style="margin-bottom: 1rem;">
                         <strong>ID nhân viên:</strong>
-                        <div style="color: var(--text-secondary);">${emp.EmployeeID}</div>
+                        <div style="color: var(--text-secondary);">${emp.EmployeeID || '-'}</div>
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <strong>Họ và tên:</strong>
@@ -336,11 +336,11 @@ async function viewEmployee(employeeId) {
                     <h3 style="margin-bottom: 1rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">Thông tin công việc</h3>
                     <div style="margin-bottom: 1rem;">
                         <strong>Phòng ban:</strong>
-                        <div style="color: var(--text-secondary);">${emp.Department?.DepartmentName || '-'}</div>
+                        <div style="color: var(--text-secondary);">${departmentName}</div>
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <strong>Chức vụ:</strong>
-                        <div style="color: var(--text-secondary);">${emp.Position?.PositionName || '-'}</div>
+                        <div style="color: var(--text-secondary);">${positionName}</div>
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <strong>Trạng thái:</strong>
@@ -356,38 +356,6 @@ async function viewEmployee(employeeId) {
                     </div>
                 </div>
             </div>
-            
-            ${emp.Salary ? `
-            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-color);">
-                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Thông tin lương</h3>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; background: var(--bg-color); padding: 1rem; border-radius: 0.5rem;">
-                    <div>
-                        <strong>Lương cơ bản:</strong>
-                        <div style="color: var(--text-secondary);">${formatCurrency(emp.Salary.BasicSalary)}</div>
-                    </div>
-                    <div>
-                        <strong>Thưởng:</strong>
-                        <div style="color: var(--success-color);">+ ${formatCurrency(emp.Salary.Bonus)}</div>
-                    </div>
-                    <div>
-                        <strong>Khấu trừ:</strong>
-                        <div style="color: var(--danger-color);">- ${formatCurrency(emp.Salary.Deduction)}</div>
-                    </div>
-                    <div>
-                        <strong>Tổng lương:</strong>
-                        <div style="color: var(--primary-color); font-size: 1.2rem; font-weight: bold;">${formatCurrency(emp.Salary.TotalSalary)}</div>
-                    </div>
-                    <div style="grid-column: 1 / -1;">
-                        <strong>Tháng lương:</strong>
-                        <div style="color: var(--text-secondary);">${formatDate(emp.Salary.SalaryDate) || '-'}</div>
-                    </div>
-                </div>
-            </div>
-            ` : `
-            <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-color); border-radius: 0.5rem; text-align: center; color: var(--text-secondary);">
-                Chưa có thông tin lương
-            </div>
-            `}
         `;
     } else {
         content.innerHTML = `
@@ -438,14 +406,6 @@ async function saveEmployee(event) {
         PositionID: parseInt(document.getElementById('position-id').value),
         Status: document.getElementById('status').value
     };
-
-    // Chỉ thêm Salary khi tạo mới
-    if (!isEdit) {
-        const salary = document.getElementById('salary').value;
-        if (salary) {
-            data.Salary = parseFloat(salary);
-        }
-    }
 
     let result;
     if (isEdit) {

@@ -26,15 +26,26 @@ const AuthManager = {
     // Kiểm tra token còn hợp lệ không
     isTokenValid() {
         const token = this.getToken();
-        if (!token) return false;
+        if (!token) {
+            console.warn('No token found in localStorage');
+            return false;
+        }
 
         const expiredDateStr = localStorage.getItem(this.EXPIRED_DATE_KEY);
-        if (!expiredDateStr) return false;
+        if (!expiredDateStr) {
+            console.warn('No expired date found in localStorage');
+            return false;
+        }
 
         const expiredDate = new Date(expiredDateStr);
         const now = new Date();
         
-        return now < expiredDate;
+        const isValid = now < expiredDate;
+        if (!isValid) {
+            console.warn('Token has expired. Expired date:', expiredDateStr, 'Current date:', now);
+        }
+        
+        return isValid;
     },
 
     // Kiểm tra đã đăng nhập chưa
@@ -93,7 +104,15 @@ const AuthManager = {
     // Lấy header Authorization cho API calls
     getAuthHeader() {
         const token = this.getToken();
-        return token ? { 'Authorization': `Bearer ${token}` } : {};
+        if (!token) {
+            console.warn('No token available for API call');
+            return {};
+        }
+        if (!this.isTokenValid()) {
+            console.warn('Token is expired or invalid');
+            // Vẫn gửi token để server xác định, nhưng có thể sẽ bị reject
+        }
+        return { 'Authorization': `Bearer ${token}` };
     }
 };
 
@@ -126,110 +145,21 @@ async function apiCallWithAuth(endpoint, method = 'GET', data = null) {
             return { success: false, error: 'Bạn không có quyền truy cập tài nguyên này', code: 'FORBIDDEN' };
         }
 
-        // Nếu không phải 2xx, thử parse JSON để lấy error message
-        if (!response.ok) {
-            let errorResult;
-            try {
-                const responseText = await response.text();
-                console.error(`API Error ${response.status}:`, responseText); // Debug
-                
-                if (responseText) {
-                    try {
-                        errorResult = JSON.parse(responseText);
-                    } catch (e) {
-                        // Nếu không parse được JSON, trả về text response
-                        return { 
-                            success: false, 
-                            error: responseText || `Lỗi ${response.status}: ${response.statusText}`,
-                            code: 'HTTP_ERROR',
-                            status: response.status
-                        };
-                    }
-                } else {
-                    errorResult = {};
-                }
-            } catch (e) {
-                // Nếu không đọc được response, trả về lỗi chung
-                console.error('Error reading response:', e);
-                return { 
-                    success: false, 
-                    error: `Lỗi ${response.status}: ${response.statusText}`,
-                    code: 'HTTP_ERROR',
-                    status: response.status
-                };
-            }
-            
-            // Xử lý lỗi validation từ Java
-            if (errorResult.details && Array.isArray(errorResult.details)) {
-                const validationErrors = errorResult.details.map(d => {
-                    if (typeof d === 'string') return d;
-                    if (d.message) return d.message;
-                    if (d.field && d.message) return `${d.field}: ${d.message}`;
-                    return JSON.stringify(d);
-                }).join(', ');
-                return {
-                    success: false,
-                    error: validationErrors || errorResult.message || 'Lỗi validation',
-                    code: errorResult.code || 'VALIDATION_ERROR',
-                    details: errorResult.details,
-                    status: response.status
-                };
-            }
-            
-            // Xử lý lỗi từ Java ErrorResponse
-            let errorMessage = errorResult.message || `Lỗi ${response.status}`;
-            
-            // Nếu có domain và details, thêm vào message
-            if (errorResult.domain) {
-                errorMessage = `[${errorResult.domain}] ${errorMessage}`;
-            }
-            
-            if (errorResult.details && typeof errorResult.details === 'object' && !Array.isArray(errorResult.details)) {
-                const detailStr = Object.entries(errorResult.details)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(', ');
-                if (detailStr) {
-                    errorMessage = `${errorMessage}\n${detailStr}`;
-                }
-            }
-            
-            return {
-                success: false,
-                error: errorMessage,
-                code: errorResult.code || 'ERROR',
-                details: errorResult.details,
-                status: response.status,
-                traceId: errorResult.traceId
-            };
-        }
-
         const result = await response.json();
 
         // Xử lý response từ Java backend
         if (result.code === 'OK' || result.operationType === 'Success') {
-            // Nếu có pagination info, trả về kèm theo
-            const response = {
+            // Java API trả về SuccessResponse với các field: data, totalElements, totalPages, page, pageSize
+            return {
                 success: true,
                 data: result.data,
+                totalElements: result.totalElements,
+                totalPages: result.totalPages,
+                page: result.page,
+                pageSize: result.pageSize,
                 message: result.message,
                 traceId: result.traceId
             };
-            
-            // Thêm thông tin pagination nếu có
-            if (result.totalPages !== undefined) {
-                response.totalPages = result.totalPages;
-            }
-            if (result.totalElements !== undefined) {
-                response.totalElements = result.totalElements;
-            }
-            if (result.page !== undefined) {
-                response.page = result.page;
-            }
-            if (result.pageSize !== undefined) {
-                response.pageSize = result.pageSize;
-            }
-            
-            return response;
         } else {
             return {
                 success: false,

@@ -1,1 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Người dùng</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_bust }}">
+</head>
+<body class="users-page">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">🏢 HR Management System</a>
+            <ul class="navbar-nav">
+                <!-- Menu sẽ được tự động tạo bởi navbar.js dựa trên role -->
+            </ul>
+        </div>
+    </nav>
 
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">👤 Quản lý Người dùng</h1>
+                <button class="btn btn-primary" onclick="openUserModal()">+ Thêm người dùng</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="form-label">🔍 Tìm kiếm</label>
+                    <input type="text" id="filter-keyword" class="form-control" placeholder="Tên, email, số điện thoại..." onkeyup="handleKeywordSearch(event)">
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-secondary" onclick="resetFilters()">Xóa bộ lọc</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Username</th>
+                            <th>Quyền</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Thêm người dùng mới</h2>
+                <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            </div>
+            <form id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="user-id">
+                
+                <div class="form-group">
+                    <label class="form-label">Họ và tên *</label>
+                    <input type="text" id="full-name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="tel" id="phone" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Username *</label>
+                    <input type="text" id="user-name" class="form-control" required>
+                </div>
+
+                <div class="form-group" id="password-group">
+                    <label class="form-label">Mật khẩu *</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Địa chỉ</label>
+                    <input type="text" id="address" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ngày sinh</label>
+                    <input type="date" id="date-of-birth" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Quyền *</label>
+                    <div id="roles-checkboxes" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Roles will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <div class="form-group" id="active-group" style="display: none;">
+                    <label class="form-label">Trạng thái</label>
+                    <select id="active" class="form-control">
+                        <option value="true">Hoạt động</option>
+                        <option value="false">Không hoạt động</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Reset Mật khẩu</h2>
+                <button class="modal-close" onclick="closeResetPasswordModal()">&times;</button>
+            </div>
+            <form id="resetPasswordForm" onsubmit="resetPassword(event)">
+                <input type="hidden" id="reset-password-user-id">
+                
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu mới *</label>
+                    <input type="password" id="new-password" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Xác nhận mật khẩu *</label>
+                    <input type="password" id="confirm-password" class="form-control" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}?v={{ cache_bust }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/users.js') }}?v={{ cache_bust }}"></script>
+</body>
+</html>

@@ -60,33 +60,69 @@ def fetch_latest_salaries(employee_ids: List[int]) -> Dict[int, Dict[str, Any]]:
 	placeholder = _placeholder(vendor)
 	in_clause = ", ".join([placeholder] * len(employee_ids))
 
-	query = f"""
-SELECT s.EmployeeID,
-       s.SalaryMonth,
-       s.BaseSalary,
-       s.Bonus,
-       s.Deductions,
-       s.NetSalary
-FROM salaries s
-JOIN (
-	SELECT EmployeeID, MAX(SalaryMonth) AS LatestMonth
-	FROM salaries
-	WHERE EmployeeID IN ({in_clause})
-	GROUP BY EmployeeID
-) latest ON latest.EmployeeID = s.EmployeeID AND latest.LatestMonth = s.SalaryMonth
-"""
+	try:
+		# Query để lấy lương mới nhất cho mỗi nhân viên
+		# Sử dụng cách tiếp cận khác: ORDER BY và ROW_NUMBER() hoặc DISTINCT ON
+		# Để xử lý cả format YYYY-MM và YYYY-MM-DD
+		if vendor == "sqlserver":
+			# SQL Server: Sử dụng ROW_NUMBER() để lấy lương mới nhất
+			query = f"""
+			SELECT EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary
+			FROM (
+				SELECT s.EmployeeID,
+				       s.SalaryMonth,
+				       s.BaseSalary,
+				       s.Bonus,
+				       s.Deductions,
+				       s.NetSalary,
+				       ROW_NUMBER() OVER (PARTITION BY s.EmployeeID ORDER BY s.SalaryMonth DESC, s.SalaryID DESC) AS rn
+				FROM salaries s
+				WHERE s.EmployeeID IN ({in_clause})
+			) ranked
+			WHERE rn = 1
+			"""
+		else:
+			# MySQL: Sử dụng subquery với MAX và JOIN
+			query = f"""
+			SELECT s.EmployeeID,
+			       s.SalaryMonth,
+			       s.BaseSalary,
+			       s.Bonus,
+			       s.Deductions,
+			       s.NetSalary
+			FROM salaries s
+			INNER JOIN (
+				SELECT EmployeeID, MAX(SalaryMonth) AS LatestMonth
+				FROM salaries
+				WHERE EmployeeID IN ({in_clause})
+				GROUP BY EmployeeID
+			) latest ON latest.EmployeeID = s.EmployeeID AND latest.LatestMonth = s.SalaryMonth
+			"""
 
-	rows = fetch_data_from_db(query, tuple(employee_ids), vendor=vendor)
-	result: Dict[int, Dict[str, Any]] = {}
-	for row in rows:
-		result[row["EmployeeID"]] = {
-			"SalaryDate": row.get("SalaryMonth"),
-			"BasicSalary": row.get("BaseSalary"),
-			"Bonus": row.get("Bonus"),
-			"Deduction": row.get("Deductions"),
-			"TotalSalary": row.get("NetSalary"),
-		}
-	return result
+		rows = fetch_data_from_db(query, tuple(employee_ids), vendor=vendor)
+		result: Dict[int, Dict[str, Any]] = {}
+		
+		for row in rows:
+			employee_id = row.get("EmployeeID")
+			if employee_id:
+				result[employee_id] = {
+					"SalaryDate": row.get("SalaryMonth"),
+					"BasicSalary": float(row.get("BaseSalary", 0) or 0),
+					"Bonus": float(row.get("Bonus", 0) or 0),
+					"Deduction": float(row.get("Deductions", 0) or 0),
+					"TotalSalary": float(row.get("NetSalary", 0) or 0),
+				}
+		
+		print(f"Fetched latest salaries for {len(result)} employees out of {len(employee_ids)} requested")
+		if len(result) < len(employee_ids):
+			print(f"Warning: Some employees ({len(employee_ids) - len(result)}) don't have salary records")
+		return result
+	except Exception as e:
+		# Log lỗi nhưng không throw để không chặn toàn bộ API
+		print(f"Error fetching latest salaries: {e}")
+		import traceback
+		print(f"Traceback: {traceback.format_exc()}")
+		return {}
 
 
 def get_all_employees(department_id=None, position_id=None, status=None, keyword=None, page=1, size=10):
@@ -154,18 +190,10 @@ WHERE 1 = 1
 
 	total_count = fetch_scalar_from_db(count_query, tuple(params), vendor=vendor)
 
-	employee_ids = [row["EmployeeID"] for row in employee_rows]
-
-	salary_map: Dict[int, Dict[str, Any]] = {}
-	try:
-		salary_map = fetch_latest_salaries(employee_ids)
-	except Exception as e:
-		# Đưa thông tin lỗi vào salary_map dưới dạng None để không chặn toàn bộ API
-		salary_map = {}
-
 	employees: List[Dict[str, Any]] = []
 	for row in employee_rows:
 		employee_id = row.get("EmployeeID")
+		
 		employee = {
 			"EmployeeID": employee_id,
 			"FullName": row.get("FullName"),
@@ -174,8 +202,7 @@ WHERE 1 = 1
 			"PhoneNumber": row.get("PhoneNumber"),
 			"PositionName": row.get("PositionName"),
 			"Status": row.get("Status"),
-      		"HireDate": row.get("HireDate").strftime("%Y-%m-%d") if row.get("HireDate") else None,
-			"Salary": salary_map.get(employee_id)
+      		"HireDate": row.get("HireDate").strftime("%Y-%m-%d") if row.get("HireDate") else None
 		}
 		employees.append(employee)
 
@@ -368,6 +395,34 @@ def delete_employee_service(employee_id: int) -> dict:
             except:
                 pass
 
+def get_employee_statistics() -> Dict[str, Any]:
+    """
+    Lấy thống kê tổng số nhân viên (KPI)
+    """
+    vendor = get_db_vendor()
+    placeholder = _placeholder(vendor)
+    
+    try:
+        # Tổng số nhân viên
+        total_query = "SELECT COUNT(*) FROM employees"
+        total_employees = fetch_scalar_from_db(total_query, (), vendor)
+        
+        # Số nhân viên đang làm việc
+        active_query = f"SELECT COUNT(*) FROM employees WHERE Status = {placeholder}"
+        active_employees = fetch_scalar_from_db(active_query, ("Đang làm việc",), vendor)
+        
+        # Số nhân viên nghỉ việc
+        inactive_query = f"SELECT COUNT(*) FROM employees WHERE Status = {placeholder}"
+        inactive_employees = fetch_scalar_from_db(inactive_query, ("Nghỉ việc",), vendor)
+        
+        return {
+            "total_employees": total_employees,
+            "active_employees": active_employees,
+            "inactive_employees": inactive_employees
+        }
+    except Exception as e:
+        raise Exception(f"Lỗi khi lấy thống kê nhân viên: {e}")
+
 def get_employee_by_id(employee_id: int) -> Dict[str, Any]:
     """
     Lấy thông tin chi tiết nhân viên theo ID
@@ -377,6 +432,7 @@ def get_employee_by_id(employee_id: int) -> Dict[str, Any]:
 
     try:
         # Query lấy thông tin chi tiết nhân viên
+        # Sử dụng LEFT JOIN để vẫn trả về nhân viên dù thiếu thông tin phòng ban hoặc chức vụ
         query = f"""
         SELECT 
             e.EmployeeID,
@@ -386,14 +442,16 @@ def get_employee_by_id(employee_id: int) -> Dict[str, Any]:
             e.Status,
             e.DateOfBirth,
             e.HireDate,
-            d.DepartmentID,
+            e.DepartmentID,
+            d.DepartmentID as DeptID,
             d.DepartmentName,
-            p.PositionID,
+            e.PositionID,
+            p.PositionID as PosID,
             p.PositionName,
             e.Gender
         FROM employees e
-        JOIN departments d ON e.DepartmentID = d.DepartmentID
-        JOIN positions p ON e.PositionID = p.PositionID
+        LEFT JOIN departments d ON e.DepartmentID = d.DepartmentID
+        LEFT JOIN positions p ON e.PositionID = p.PositionID
         WHERE e.EmployeeID = {placeholder}
         """
 
@@ -409,6 +467,26 @@ def get_employee_by_id(employee_id: int) -> Dict[str, Any]:
         salary_info = salary_map.get(employee_id, {})
 
         # Format kết quả
+        # Xử lý Department - có thể null
+        department_id = employee.get('DepartmentID') or employee.get('DeptID')
+        department_name = employee.get('DepartmentName')
+        department = None
+        if department_id and department_name:
+            department = {
+                'DepartmentID': department_id,
+                'DepartmentName': department_name
+            }
+        
+        # Xử lý Position - có thể null
+        position_id = employee.get('PositionID') or employee.get('PosID')
+        position_name = employee.get('PositionName')
+        position = None
+        if position_id and position_name:
+            position = {
+                'PositionID': position_id,
+                'PositionName': position_name
+            }
+        
         result = {
             'success': True,
             'employee': {
@@ -419,14 +497,8 @@ def get_employee_by_id(employee_id: int) -> Dict[str, Any]:
                 'Status': employee.get('Status'),
                 'DateOfBirth': employee.get('DateOfBirth').strftime('%Y-%m-%d') if employee.get('DateOfBirth') else None,
                 'HireDate': employee.get('HireDate').strftime('%Y-%m-%d') if employee.get('HireDate') else None,
-                'Department': {
-                    'DepartmentID': employee.get('DepartmentID'),
-                    'DepartmentName': employee.get('DepartmentName')
-                },
-                'Position': {
-                    'PositionID': employee.get('PositionID'),
-                    'PositionName': employee.get('PositionName')
-                },              
+                'Department': department,
+                'Position': position,              
                 'Gender': employee.get('Gender'),
                 'Salary': salary_info if salary_info else None
             }

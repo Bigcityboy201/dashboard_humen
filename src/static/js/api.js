@@ -29,6 +29,7 @@ const UsersAPI = {
     // Tạo user mới
     create: async (data) => {
         // data: { fullName, email, phone, userName, password, address, dateOfBirth, roles: [roleIds] }
+        // UserRequestDTO expects 'roles' (List<Integer>)
         return await apiCallJava('/users', 'POST', data);
     },
 
@@ -302,6 +303,31 @@ const DashboardAPI = {
     // Lấy thống kê tổng hợp cho trang chủ
     getOverview: async () => {
         return await apiCallPython('/dashboard/overview');
+    }
+};
+
+// ========== PYTHON API - Statistics ==========
+const StatisticsAPI = {
+    // Tổng số nhân viên (KPI)
+    getEmployeeStatistics: async () => {
+        return await apiCallPython('/employees/statistics');
+    },
+
+    // Thống kê Lương (KPI, Biểu đồ)
+    getSalaryStatistics: async (year) => {
+        const queryString = year ? `?year=${year}` : '';
+        return await apiCallPython(`/salaries/statistics${queryString}`);
+    },
+
+    // Thống kê Chấm công
+    getAttendanceStatistics: async (year) => {
+        const queryString = year ? `?year=${year}` : '';
+        return await apiCallPython(`/attendance/statistics${queryString}`);
+    },
+
+    // Nhân viên Theo Phòng Ban (Báo cáo HR)
+    getDepartmentStatistics: async () => {
+        return await apiCallPython('/departments/statistics');
     }
 };
 

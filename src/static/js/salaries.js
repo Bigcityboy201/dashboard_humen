@@ -138,22 +138,80 @@ function closeGenerateSalaryModal() {
 async function generateSalary(event) {
     event.preventDefault();
 
+    // Kiểm tra authentication
+    if (!AuthManager.isAuthenticated()) {
+        showAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 2000);
+        return;
+    }
+
+    // Kiểm tra quyền
+    if (!AuthManager.hasAnyRole('ADMIN', 'PAYROLL_MANAGER')) {
+        showAlert('Bạn không có quyền tạo lương. Chỉ PAYROLL_MANAGER và ADMIN mới có quyền này.', 'error');
+        return;
+    }
+
     const employeeId = parseInt(document.getElementById('generate-employee-id').value);
-    const month = document.getElementById('generate-month').value;
+    let salaryMonth = document.getElementById('generate-month').value;
+    const baseSalary = parseFloat(document.getElementById('generate-base-salary').value) || 0;
+    const bonus = parseFloat(document.getElementById('generate-bonus').value) || 0;
+    const deductions = parseFloat(document.getElementById('generate-deductions').value) || 0;
+
+    // Validate dữ liệu
+    if (!employeeId || employeeId <= 0) {
+        showAlert('Vui lòng chọn nhân viên hợp lệ', 'error');
+        return;
+    }
+
+    if (!salaryMonth) {
+        showAlert('Vui lòng chọn tháng lương', 'error');
+        return;
+    }
+
+    if (baseSalary <= 0) {
+        showAlert('Lương cơ bản phải lớn hơn 0', 'error');
+        return;
+    }
+
+    // Normalize SalaryMonth: input type="month" trả về YYYY-MM, chuyển thành YYYY-MM-01
+    if (salaryMonth.length === 7 && salaryMonth[4] === '-') {
+        salaryMonth = salaryMonth + '-01'; // YYYY-MM -> YYYY-MM-01
+    }
 
     const data = {
         EmployeeID: employeeId,
-        SalaryMonth: month
+        SalaryMonth: salaryMonth,
+        BaseSalary: baseSalary,
+        Bonus: bonus,
+        Deductions: deductions
     };
 
-    const result = await SalariesAPI.generate(data);
+    console.log('Generating salary with data:', data);
 
-    if (result.success) {
-        showAlert('Tạo bảng lương thành công!', 'success');
-        closeGenerateSalaryModal();
-        loadSalaries();
-    } else {
-        showAlert(result.error || 'Có lỗi xảy ra', 'error');
+    try {
+        const result = await SalariesAPI.generate(data);
+
+        if (result.success) {
+            showAlert('Tạo bảng lương thành công!', 'success');
+            closeGenerateSalaryModal();
+            loadSalaries();
+        } else {
+            // Xử lý lỗi chi tiết
+            if (result.code === 'INVALID' || result.code === 'FORBIDDEN' || result.error?.includes('login')) {
+                showAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+                setTimeout(() => {
+                    AuthManager.logout();
+                }, 2000);
+            } else {
+                showAlert(result.error || result.message || 'Có lỗi xảy ra', 'error');
+            }
+            console.error('Generate salary error:', result);
+        }
+    } catch (error) {
+        console.error('Generate salary exception:', error);
+        showAlert(error.message || 'Có lỗi xảy ra khi tạo lương', 'error');
     }
 }
 

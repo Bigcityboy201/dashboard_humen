@@ -27,6 +27,7 @@ def fetch_data_from_db(sql_query: str, params: tuple, vendor: str | None = None)
 		columns = [column[0] for column in db_cursor.description]
 		return [dict(zip(columns, row)) for row in db_cursor.fetchall()]
 	except Exception as e:
+		print(f"Error in fetch_data_from_db: {e}, Query: {sql_query}, Params: {params}")
 		raise Exception(f"Lỗi DTB: {e}")
 	finally:
 		if conn:
@@ -40,7 +41,10 @@ def fetch_scalar_from_db(sql_query: str, params: tuple, vendor: str | None = Non
 		db_cursor = conn.cursor()
 		db_cursor.execute(sql_query, params)
 		row = db_cursor.fetchone()
-		return float(row[0]) if row and row[0] else 0.0
+		return float(row[0]) if row and row[0] is not None else 0.0
+	except Exception as e:
+		print(f"Error in fetch_scalar_from_db: {e}, Query: {sql_query}, Params: {params}")
+		raise
 	finally:
 		if conn:
 			conn.close()
@@ -52,6 +56,9 @@ def get_salary_report_by_year(year: str) -> Dict[str, Any]:
 	vendor = get_salary_db_vendor()
 	placeholder = _placeholder(vendor)
 	
+	# SalaryMonth là string (YYYY-MM), không phải date, nên dùng LIKE thay vì YEAR()
+	year_pattern = f"{year}-%"
+	
 	# Lấy tổng lương theo từng tháng
 	monthly_query = f"""
 		SELECT 
@@ -62,11 +69,15 @@ def get_salary_report_by_year(year: str) -> Dict[str, Any]:
 			MIN(NetSalary) as min_salary,
 			MAX(NetSalary) as max_salary
 		FROM salaries
-		WHERE YEAR(SalaryMonth) = {placeholder}
+		WHERE SalaryMonth LIKE {placeholder}
 		GROUP BY SalaryMonth
 		ORDER BY SalaryMonth
 	"""
-	monthly_data = fetch_data_from_db(monthly_query, (year,), vendor)
+	try:
+		monthly_data = fetch_data_from_db(monthly_query, (year_pattern,), vendor)
+	except Exception as e:
+		print(f"Error fetching monthly salary data: {e}")
+		monthly_data = []
 	
 	# Tổng lương cả năm
 	total_query = f"""
@@ -75,10 +86,14 @@ def get_salary_report_by_year(year: str) -> Dict[str, Any]:
 			COUNT(*) as total_records,
 			AVG(NetSalary) as avg_salary
 		FROM salaries
-		WHERE YEAR(SalaryMonth) = {placeholder}
+		WHERE SalaryMonth LIKE {placeholder}
 	"""
-	total_row = fetch_data_from_db(total_query, (year,), vendor)
-	total_summary = total_row[0] if total_row else {}
+	try:
+		total_row = fetch_data_from_db(total_query, (year_pattern,), vendor)
+		total_summary = total_row[0] if total_row else {}
+	except Exception as e:
+		print(f"Error fetching total salary summary: {e}")
+		total_summary = {}
 	
 	return {
 		"year": year,
@@ -93,6 +108,9 @@ def get_attendance_report_by_year(year: str) -> Dict[str, Any]:
 	vendor = get_db_vendor()
 	placeholder = _placeholder(vendor)
 	
+	# AttendanceMonth là string (YYYY-MM), không phải date, nên dùng LIKE thay vì YEAR()
+	year_pattern = f"{year}-%"
+	
 	# Lấy thống kê theo từng tháng
 	monthly_query = f"""
 		SELECT 
@@ -103,11 +121,15 @@ def get_attendance_report_by_year(year: str) -> Dict[str, Any]:
 			SUM(AbsentDays) as total_absentdays,
 			AVG(WorkDays) as avg_workdays
 		FROM attendance
-		WHERE YEAR(AttendanceMonth) = {placeholder}
+		WHERE AttendanceMonth LIKE {placeholder}
 		GROUP BY AttendanceMonth
 		ORDER BY AttendanceMonth
 	"""
-	monthly_data = fetch_data_from_db(monthly_query, (year,), vendor)
+	try:
+		monthly_data = fetch_data_from_db(monthly_query, (year_pattern,), vendor)
+	except Exception as e:
+		print(f"Error fetching monthly attendance data: {e}")
+		monthly_data = []
 	
 	# Tổng hợp cả năm
 	total_query = f"""
@@ -118,10 +140,14 @@ def get_attendance_report_by_year(year: str) -> Dict[str, Any]:
 			SUM(AbsentDays) as total_absentdays,
 			AVG(WorkDays) as avg_workdays
 		FROM attendance
-		WHERE YEAR(AttendanceMonth) = {placeholder}
+		WHERE AttendanceMonth LIKE {placeholder}
 	"""
-	total_row = fetch_data_from_db(total_query, (year,), vendor)
-	total_summary = total_row[0] if total_row else {}
+	try:
+		total_row = fetch_data_from_db(total_query, (year_pattern,), vendor)
+		total_summary = total_row[0] if total_row else {}
+	except Exception as e:
+		print(f"Error fetching total attendance summary: {e}")
+		total_summary = {}
 	
 	return {
 		"year": year,
@@ -138,21 +164,33 @@ def get_financial_report(year: str) -> Dict[str, Any]:
 	placeholder_salary = _placeholder(salary_vendor)
 	placeholder = _placeholder(vendor)
 	
+	# SalaryMonth là string (YYYY-MM), không phải date
+	year_pattern = f"{year}-%"
+	
 	# Tổng lương năm
 	salary_query = f"""
 		SELECT SUM(NetSalary) as total_salary
 		FROM salaries
-		WHERE YEAR(SalaryMonth) = {placeholder_salary}
+		WHERE SalaryMonth LIKE {placeholder_salary}
 	"""
-	total_salary = fetch_scalar_from_db(salary_query, (year,), salary_vendor)
+	try:
+		total_salary = fetch_scalar_from_db(salary_query, (year_pattern,), salary_vendor)
+	except Exception as e:
+		print(f"Error fetching total salary: {e}")
+		total_salary = 0.0
 	
-	# Tổng cổ tức năm
+	# Tổng cổ tức năm - DividendDate là date, có thể dùng YEAR()
+	# Column name là DividendAmount, không phải Amount
 	dividend_query = f"""
-		SELECT SUM(Amount) as total_dividends
+		SELECT SUM(DividendAmount) as total_dividends
 		FROM dividends
 		WHERE YEAR(DividendDate) = {placeholder}
 	"""
-	total_dividends = fetch_scalar_from_db(dividend_query, (year,), vendor)
+	try:
+		total_dividends = fetch_scalar_from_db(dividend_query, (year,), vendor)
+	except Exception as e:
+		print(f"Error fetching total dividends: {e}")
+		total_dividends = 0.0
 	
 	# Chi tiết theo tháng
 	monthly_salary_query = f"""
@@ -160,16 +198,21 @@ def get_financial_report(year: str) -> Dict[str, Any]:
 			SalaryMonth as month,
 			SUM(NetSalary) as salary_amount
 		FROM salaries
-		WHERE YEAR(SalaryMonth) = {placeholder_salary}
+		WHERE SalaryMonth LIKE {placeholder_salary}
 		GROUP BY SalaryMonth
 		ORDER BY SalaryMonth
 	"""
-	monthly_salary = fetch_data_from_db(monthly_salary_query, (year,), salary_vendor)
+	try:
+		monthly_salary = fetch_data_from_db(monthly_salary_query, (year_pattern,), salary_vendor)
+	except Exception as e:
+		print(f"Error fetching monthly salary: {e}")
+		monthly_salary = []
 	
+	# Chi tiết cổ tức theo tháng - Column name là DividendAmount
 	monthly_dividend_query = f"""
 		SELECT 
 			FORMAT(DividendDate, 'yyyy-MM') as month,
-			SUM(Amount) as dividend_amount
+			SUM(DividendAmount) as dividend_amount
 		FROM dividends
 		WHERE YEAR(DividendDate) = {placeholder}
 		GROUP BY FORMAT(DividendDate, 'yyyy-MM')
@@ -177,13 +220,17 @@ def get_financial_report(year: str) -> Dict[str, Any]:
 	""" if vendor == "sqlserver" else f"""
 		SELECT 
 			DATE_FORMAT(DividendDate, '%%Y-%%m') as month,
-			SUM(Amount) as dividend_amount
+			SUM(DividendAmount) as dividend_amount
 		FROM dividends
 		WHERE YEAR(DividendDate) = {placeholder}
 		GROUP BY DATE_FORMAT(DividendDate, '%%Y-%%m')
 		ORDER BY DATE_FORMAT(DividendDate, '%%Y-%%m')
 	"""
-	monthly_dividend = fetch_data_from_db(monthly_dividend_query, (year,), vendor)
+	try:
+		monthly_dividend = fetch_data_from_db(monthly_dividend_query, (year,), vendor)
+	except Exception as e:
+		print(f"Error fetching monthly dividend: {e}")
+		monthly_dividend = []
 	
 	return {
 		"year": year,
@@ -193,6 +240,8 @@ def get_financial_report(year: str) -> Dict[str, Any]:
 		"monthly_salary": monthly_salary,
 		"monthly_dividends": monthly_dividend
 	}
+
+
 
 
 

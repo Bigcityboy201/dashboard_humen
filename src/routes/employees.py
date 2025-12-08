@@ -196,4 +196,23 @@ def update_employee(employee_id):
             trace_id=getattr(g, 'trace_id', None)
         )), 500
         
+@employees_bp.route('/employees/statistics', methods=['GET'])
+def get_employee_statistics():
+    """
+    API Endpoint: GET /employees/statistics
+    Lấy thống kê tổng số nhân viên (KPI)
+    """
+    try:
+        from services.employee_service import get_employee_statistics
+        result = get_employee_statistics()
+        return jsonify(wrap_success(result, trace_id=getattr(g, 'trace_id', None))), 200
+    except Exception as e:
+        return jsonify(wrap_error(
+            code='INTERNAL_SERVER',
+            message='Lỗi khi lấy thống kê nhân viên.',
+            domain='employees',
+            details={"error": str(e)},
+            trace_id=getattr(g, 'trace_id', None)
+        )), 500
+        
 #thiếu xóa mềm
