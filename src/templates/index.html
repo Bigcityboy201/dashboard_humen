@@ -34,25 +34,48 @@
             <div class="kpi-card">
                 <div class="kpi-icon">👥</div>
                 <div class="kpi-content">
-                    <div class="kpi-label">Total Employees</div>
+                    <div class="kpi-label">Tổng số nhân viên</div>
                     <div class="kpi-value" id="kpi-total-employees">-</div>
                 </div>
             </div>
-            <div class="kpi-card">
+            <!-- HR-specific KPIs (shown for HR_MANAGER) -->
+            <div class="kpi-card" id="kpi-card-departments" style="display: none;">
+                <div class="kpi-icon">🏢</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Tổng số phòng ban</div>
+                    <div class="kpi-value" id="kpi-total-departments">-</div>
+                </div>
+            </div>
+            <div class="kpi-card" id="kpi-card-positions" style="display: none;">
+                <div class="kpi-icon">💼</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Tổng số chức vụ</div>
+                    <div class="kpi-value" id="kpi-total-positions">-</div>
+                </div>
+            </div>
+            <div class="kpi-card" id="kpi-card-workdays" style="display: none;">
+                <div class="kpi-icon">📅</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Tổng ngày công (tháng này)</div>
+                    <div class="kpi-value" id="kpi-total-workdays">-</div>
+                </div>
+            </div>
+            <!-- ADMIN-specific KPIs (hidden for HR_MANAGER) -->
+            <div class="kpi-card" id="kpi-card-avg-salary">
                 <div class="kpi-icon">💰</div>
                 <div class="kpi-content">
                     <div class="kpi-label">Average Net Salary</div>
                     <div class="kpi-value" id="kpi-avg-net-salary">-</div>
                 </div>
             </div>
-            <div class="kpi-card">
+            <div class="kpi-card" id="kpi-card-gross-salary">
                 <div class="kpi-icon">💵</div>
                 <div class="kpi-content">
                     <div class="kpi-label">Total Gross Salary</div>
                     <div class="kpi-value" id="kpi-total-gross-salary">-</div>
                 </div>
             </div>
-            <div class="kpi-card">
+            <div class="kpi-card" id="kpi-card-monthly-bills">
                 <div class="kpi-icon">📊</div>
                 <div class="kpi-content">
                     <div class="kpi-label">Total Monthly Bills</div>
@@ -62,9 +85,9 @@
         </div>
 
         <!-- Charts Row -->
-        <div class="charts-row">
+        <div class="charts-row" id="salary-charts-row">
             <!-- Salary Trend Chart -->
-            <div class="card chart-card">
+            <div class="card chart-card" id="salary-trend-chart-card">
                 <div class="card-header">
                     <h3 class="card-title">Salary Based VS Net Salary Trend</h3>
                 </div>
@@ -74,7 +97,7 @@
             </div>
 
             <!-- Salary History Chart -->
-            <div class="card chart-card">
+            <div class="card chart-card" id="salary-history-chart-card">
                 <div class="card-header">
                     <h3 class="card-title">Salary History Trend</h3>
                 </div>
@@ -85,9 +108,9 @@
         </div>
 
         <!-- Bottom Row: Department Stats and Recent Employees -->
-        <div class="bottom-row">
+        <div class="bottom-row" id="hr-sections-row">
             <!-- Employee Count by Department -->
-            <div class="card table-card">
+            <div class="card table-card" id="department-stats-card">
                 <div class="card-header">
                     <h3 class="card-title">Employee Count by Department</h3>
                 </div>
@@ -109,19 +132,32 @@
                 </div>
             </div>
 
-            <!-- Recent Employees -->
-            <div class="card recent-card">
+            <!-- Recent Employees / New Employees -->
+            <div class="card recent-card" id="employees-card">
                 <div class="card-header">
-                    <h3 class="card-title">Recent Employees</h3>
+                    <h3 class="card-title" id="employees-section-title">Recent Employees</h3>
                 </div>
                 <div id="recent-employees" class="recent-employees-list">
+                    <div class="loading">Đang tải...</div>
+                </div>
+                <div id="new-employees" class="recent-employees-list" style="display: none;">
                     <div class="loading">Đang tải...</div>
                 </div>
             </div>
         </div>
 
+        <!-- HR-specific: Positions Stats (shown for HR_MANAGER) -->
+        <div class="card table-card" id="positions-card" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title">Danh sách Chức vụ</h3>
+            </div>
+            <div id="positions-stats" class="table-container" style="padding: 1rem;">
+                <div class="loading">Đang tải...</div>
+            </div>
+        </div>
+
         <!-- Attendance Summary Section -->
-        <div class="card chart-card">
+        <div class="card chart-card" id="attendance-chart-card">
             <div class="card-header">
                 <h3 class="card-title">Attendance Summary</h3>
             </div>
@@ -130,8 +166,18 @@
             </div>
         </div>
 
+        <!-- Trends Chart Section (6 months trend) -->
+        <div class="card chart-card" id="trends-chart-card">
+            <div class="card-header">
+                <h3 class="card-title">📈 Xu Hướng 6 Tháng Gần Đây</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="trends-chart"></canvas>
+            </div>
+        </div>
+
         <!-- Salary Summary Table -->
-        <div class="card table-card">
+        <div class="card table-card" id="salary-summary-card">
             <div class="card-header">
                 <h3 class="card-title">Salary Summary (Current Year)</h3>
             </div>
@@ -155,7 +201,7 @@
         </div>
 
         <!-- Financial Reports Section -->
-        <div class="card">
+        <div class="card" id="financial-reports-card">
             <div class="card-header">
                 <h3 class="card-title">Financial Reports</h3>
             </div>

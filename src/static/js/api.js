@@ -303,6 +303,26 @@ const DashboardAPI = {
     // Lấy thống kê tổng hợp cho trang chủ
     getOverview: async () => {
         return await apiCallPython('/dashboard/overview');
+    },
+
+    // So sánh dữ liệu hiện tại với kỳ trước
+    getComparison: async () => {
+        return await apiCallPython('/dashboard/comparison');
+    },
+
+    // Lấy top employees mới nhất
+    getTopEmployees: async (limit = 5) => {
+        return await apiCallPython(`/dashboard/top-employees?limit=${limit}`);
+    },
+
+    // Lấy top departments có nhiều nhân viên nhất
+    getTopDepartments: async (limit = 5) => {
+        return await apiCallPython(`/dashboard/top-departments?limit=${limit}`);
+    },
+
+    // Lấy xu hướng dữ liệu trong N tháng gần đây
+    getTrends: async (months = 6) => {
+        return await apiCallPython(`/dashboard/trends?months=${months}`);
     }
 };
 

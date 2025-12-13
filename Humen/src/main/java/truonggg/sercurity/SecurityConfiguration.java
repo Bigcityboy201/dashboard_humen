@@ -108,6 +108,10 @@ public class SecurityConfiguration {
 				// Positions endpoints: GET /positions, POST /positions, GET/PUT/DELETE
 				// /positions/{id}, GET /positions/{id}/employees
 				.requestMatchers("/api/python/positions/**").hasAnyRole("ADMIN", "HR_MANAGER")
+				// Dashboard endpoints: GET /dashboard/overview (cho HR_MANAGER, PAYROLL_MANAGER và ADMIN)
+				.requestMatchers("/api/python/dashboard/**").hasAnyRole("ADMIN", "HR_MANAGER", "PAYROLL_MANAGER")
+				// Reports endpoints: GET /reports/** (cho PAYROLL_MANAGER và ADMIN để xem báo cáo tài chính)
+				.requestMatchers("/api/python/reports/**").hasAnyRole("ADMIN", "PAYROLL_MANAGER")
 
 				// API Python - Tất cả endpoint khác - chỉ ADMIN
 				.requestMatchers("/api/python/**").hasRole("ADMIN")
